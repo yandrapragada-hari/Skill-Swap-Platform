@@ -28,6 +28,7 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
 
   // Signaling state tracking to avoid illegal state transitions
   const isNegotiating = useRef(false);
+  const pendingCandidates = useRef([]);
 
   // Cleanup function
   const cleanUp = useCallback(() => {
@@ -44,6 +45,7 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
     setIsIncoming(false);
     setIsAccepted(false);
     isNegotiating.current = false;
+    pendingCandidates.current = [];
     if (onEndCall) onEndCall();
   }, [localStream, onEndCall]);
 
@@ -71,7 +73,18 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
     };
 
     pcInstance.ontrack = (event) => {
+      console.log('Remote track received:', event.streams[0]);
       setRemoteStream(event.streams[0]);
+    };
+
+    pcInstance.oniceconnectionstatechange = () => {
+      console.log('ICE state:', pcInstance.iceConnectionState);
+      if (pcInstance.iceConnectionState === 'connected') {
+        toast.success('Video connected!');
+      } else if (pcInstance.iceConnectionState === 'failed') {
+        toast.error('Connection failed. Please try again.');
+        cleanUp();
+      }
     };
 
     pcInstance.onnegotiationneeded = async () => {
@@ -87,7 +100,9 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
               fromAvatar: user?.avatar
             });
         } catch (err) {
-            console.error(err);
+            console.error('Negotiation error:', err);
+        } finally {
+            isNegotiating.current = false;
         }
     };
 
@@ -123,6 +138,17 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
     stream.getTracks().forEach(track => pc.current.addTrack(track, stream));
 
     await pc.current.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+
+    // Process queued candidates
+    while (pendingCandidates.current.length > 0) {
+      const cand = pendingCandidates.current.shift();
+      try {
+        await pc.current.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (e) {
+        console.error('Error adding queued candidate:', e);
+      }
+    }
+
     const answer = await pc.current.createAnswer();
     await pc.current.setLocalDescription(answer);
 
@@ -163,11 +189,22 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
       try {
           if (pc.current) {
               await pc.current.setRemoteDescription(new RTCSessionDescription(answer));
+              
+              // Process queued candidates
+              while (pendingCandidates.current.length > 0) {
+                const cand = pendingCandidates.current.shift();
+                try {
+                  await pc.current.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                  console.error('Error adding queued candidate:', e);
+                }
+              }
+
               setIsAccepted(true);
               setIsCalling(false);
           }
       } catch (err) {
-          console.error(err);
+          console.error('Handle answer error:', err);
       }
     };
 
@@ -175,6 +212,9 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
       try {
         if (pc.current && pc.current.remoteDescription) {
           await pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          // Queue candidates arriving before remote description
+          pendingCandidates.current.push(candidate);
         }
       } catch (e) {
         console.error('Error adding received ice candidate', e);
