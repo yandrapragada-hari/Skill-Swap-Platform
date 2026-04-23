@@ -4,502 +4,351 @@ import { LuPhone, LuVideo, LuVideoOff, LuMic, LuMicOff, LuPhoneOff, LuMaximize2,
 import { getSocket } from '../services/socket';
 import toast from 'react-hot-toast';
 
-// TURN servers are REQUIRED for production WebRTC (STUN alone fails behind NAT/firewalls)
-const ICE_CONFIG = {
+const ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 10,
 };
 
-// callState: 'idle' | 'calling' | 'incoming' | 'connected'
 export default function VideoCallOverlay({ user, activeConv, incomingCall, onEndCall }) {
-  const [callState, setCallState] = useState('idle');
-  const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [remoteUser, setRemoteUser] = useState(null);
+  const [phase, setPhase]       = useState('idle'); // idle|calling|incoming|connected
+  const [muted, setMuted]       = useState(false);
+  const [vidOff, setVidOff]     = useState(false);
+  const [mini, setMini]         = useState(false);
+  const [peerName, setPeerName] = useState('');
+  const [peerAva, setPeerAva]   = useState('');
 
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const pcRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const pendingCandidates = useRef([]);
-  const remoteDescSet = useRef(false);
-  const callStateRef = useRef('idle');
+  const phaseRef   = useRef('idle');
+  const pcRef      = useRef(null);
+  const localRef   = useRef(null); // MediaStream
+  const localVid   = useRef(null); // <video>
+  const remoteVid  = useRef(null); // <video>
+  const iceBuf     = useRef([]);
+  const remoteSet  = useRef(false);
+  const peerIdRef  = useRef(null);
 
-  const socket = getSocket();
+  const go = (p) => { phaseRef.current = p; setPhase(p); };
 
-  // Keep ref in sync
-  useEffect(() => { callStateRef.current = callState; }, [callState]);
+  /* ── get fresh socket every time ────────────────────── */
+  const S = () => getSocket();
 
-  const stopStream = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => t.stop());
-      localStreamRef.current = null;
-    }
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+  /* ── clean up ────────────────────────────────────────── */
+  const stopMedia = () => {
+    localRef.current?.getTracks().forEach(t => t.stop());
+    localRef.current = null;
+    if (localVid.current)  localVid.current.srcObject  = null;
+    if (remoteVid.current) remoteVid.current.srcObject = null;
   };
 
-  const closePC = () => {
-    if (pcRef.current) {
-      pcRef.current.ontrack = null;
-      pcRef.current.onicecandidate = null;
-      pcRef.current.oniceconnectionstatechange = null;
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    pendingCandidates.current = [];
-    remoteDescSet.current = false;
+  const destroyPC = () => {
+    pcRef.current?.close();
+    pcRef.current = null;
+    iceBuf.current = [];
+    remoteSet.current = false;
   };
 
-  const cleanUp = useCallback((notify = true) => {
-    stopStream();
-    closePC();
-    setCallState('idle');
-    setMuted(false);
-    setVideoOff(false);
-    setIsMinimized(false);
-    setRemoteUser(null);
-    if (notify && onEndCall) onEndCall();
+  const reset = useCallback((notify = true) => {
+    stopMedia();
+    destroyPC();
+    go('idle');
+    setMuted(false); setVidOff(false); setMini(false);
+    setPeerName(''); setPeerAva('');
+    peerIdRef.current = null;
+    if (notify) onEndCall?.();
   }, [onEndCall]);
 
-  const getStream = async () => {
+  /* ── camera ──────────────────────────────────────────── */
+  const getCam = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      return stream;
-    } catch (err) {
-      console.error('Media error:', err);
-      toast.error('Could not access camera/mic. Check browser permissions.');
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localRef.current = s;
+      if (localVid.current) localVid.current.srcObject = s;
+      return s;
+    } catch {
+      toast.error('Camera/mic blocked. Allow access in browser settings.');
       return null;
     }
   };
 
-  const createPC = useCallback((remoteId) => {
-    closePC();
-    const pc = new RTCPeerConnection(ICE_CONFIG);
+  /* ── build RTCPeerConnection ─────────────────────────── */
+  const buildPC = (peerId) => {
+    destroyPC();
+    peerIdRef.current = peerId;
+    const pc = new RTCPeerConnection(ICE);
     pcRef.current = pc;
 
     pc.onicecandidate = ({ candidate }) => {
-      if (candidate && socket) {
-        socket.emit('ice-candidate', { to: remoteId, candidate });
+      if (candidate) S()?.emit('ice-candidate', { to: peerId, candidate });
+    };
+
+    pc.ontrack = (e) => {
+      if (remoteVid.current && e.streams?.[0]) {
+        remoteVid.current.srcObject = e.streams[0];
       }
     };
 
-    pc.ontrack = (event) => {
-      console.log('[WebRTC] remote track received');
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    pc.oniceconnectionstatechange = () => {
-      const s = pc.iceConnectionState;
-      console.log('[WebRTC] ICE:', s);
-      if (s === 'connected' || s === 'completed') {
-        setCallState('connected');
-      }
-      if (s === 'failed') {
-        toast.error('Connection failed. Try again.');
-        cleanUp();
-      }
+    pc.onconnectionstatechange = () => {
+      const s = pc.connectionState;
+      if (s === 'connected') go('connected');
+      if (s === 'failed' || s === 'disconnected') { toast.error('Call dropped.'); reset(); }
     };
 
     return pc;
-  }, [socket, cleanUp]);
-
-  const drainCandidates = async (pc) => {
-    while (pendingCandidates.current.length > 0) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(pendingCandidates.current.shift()));
-      } catch (e) { console.warn('Queued ICE error:', e); }
-    }
   };
 
-  // ── Outgoing call ──────────────────────────────────────────────────
-  const startCall = useCallback(async (conv) => {
-    if (callStateRef.current !== 'idle') return;
-    const remoteId = conv?.participant?.id || conv?.participant?._id;
-    if (!remoteId || !socket) return;
+  const drainICE = async (pc) => {
+    for (const c of iceBuf.current) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+    }
+    iceBuf.current = [];
+  };
 
-    setCallState('calling');
-    setRemoteUser(conv.participant);
+  /* ── outgoing call ───────────────────────────────────── */
+  const startCall = async (conv) => {
+    if (phaseRef.current !== 'idle') return;
+    const peerId = String(conv?.participant?.id || conv?.participant?._id || '');
+    const myId   = String(user?.id || user?._id || '');
+    if (!peerId || !myId) { toast.error('Cannot identify peer'); return; }
 
-    const stream = await getStream();
-    if (!stream) { setCallState('idle'); return; }
+    go('calling');
+    setPeerName(conv.participant?.name || '');
+    setPeerAva(conv.participant?.avatar || '');
 
-    const pc = createPC(remoteId);
+    const stream = await getCam();
+    if (!stream) { go('idle'); return; }
+
+    const pc = buildPC(peerId);
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-    try {
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
-      await pc.setLocalDescription(offer);
-      socket.emit('call-user', {
-        to: remoteId,
-        offer: pc.localDescription,
-        fromName: user?.name,
-        fromAvatar: user?.avatar,
-        callerId: String(user?.id || user?._id),
-      });
-    } catch (err) {
-      console.error('startCall error:', err);
-      toast.error('Failed to initiate call');
-      cleanUp();
-    }
-  }, [socket, user, createPC, cleanUp]);
+    const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+    await pc.setLocalDescription(offer);
 
-  // ── Accept incoming call ───────────────────────────────────────────
-  const acceptCall = useCallback(async () => {
-    if (!incomingCall || callStateRef.current !== 'incoming') return;
-    const remoteId = incomingCall.callerId || incomingCall.from;
-    if (!remoteId || !socket) return;
+    S()?.emit('call-user', {
+      to: peerId,
+      offer: pc.localDescription,
+      fromName:   user?.name,
+      fromAvatar: user?.avatar,
+      callerId:   myId,
+    });
+  };
 
-    setCallState('connected');
+  /* ── accept call ─────────────────────────────────────── */
+  const acceptCall = async () => {
+    if (phaseRef.current !== 'incoming' || !incomingCall) return;
+    const peerId = String(incomingCall.callerId || incomingCall.from || '');
+    if (!peerId) return;
 
-    const stream = await getStream();
-    if (!stream) { setCallState('idle'); return; }
+    go('connected');
 
-    const pc = createPC(remoteId);
+    const stream = await getCam();
+    if (!stream) { go('idle'); return; }
+
+    const pc = buildPC(peerId);
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-    try {
-      await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-      remoteDescSet.current = true;
-      await drainCandidates(pc);
+    await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+    remoteSet.current = true;
+    await drainICE(pc);
 
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer-call', { to: remoteId, answer: pc.localDescription });
-    } catch (err) {
-      console.error('acceptCall error:', err);
-      toast.error('Failed to accept call');
-      cleanUp();
-    }
-  }, [incomingCall, socket, createPC, cleanUp]);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    S()?.emit('answer-call', { to: peerId, answer: pc.localDescription });
+  };
 
-  const rejectCall = useCallback(() => {
-    const remoteId = incomingCall?.callerId || incomingCall?.from;
-    if (remoteId && socket) socket.emit('end-call', { to: remoteId });
-    cleanUp();
-  }, [incomingCall, socket, cleanUp]);
+  const rejectCall = () => {
+    S()?.emit('end-call', { to: String(incomingCall?.callerId || incomingCall?.from || '') });
+    reset();
+  };
 
-  const endCall = useCallback(() => {
-    const remoteId =
-      (remoteUser?.id || remoteUser?._id) ||
-      (activeConv?.participant?.id || activeConv?.participant?._id) ||
-      (incomingCall?.callerId || incomingCall?.from);
-    if (remoteId && socket) socket.emit('end-call', { to: remoteId });
-    cleanUp();
-  }, [remoteUser, activeConv, incomingCall, socket, cleanUp]);
+  const hangUp = () => {
+    S()?.emit('end-call', { to: peerIdRef.current });
+    reset();
+  };
 
-  // ── Socket listeners ───────────────────────────────────────────────
+  /* ── socket listeners (attach once, retry if needed) ─── */
   useEffect(() => {
-    if (!socket) return;
+    let attached = false;
+    let timer;
 
-    const handleAnswer = async ({ answer }) => {
-      if (!pcRef.current) return;
-      try {
+    const setup = () => {
+      const s = getSocket();
+      if (!s || attached) return;
+      attached = true;
+
+      s.on('call-answered', async ({ answer }) => {
+        if (!pcRef.current) return;
         await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-        remoteDescSet.current = true;
-        await drainCandidates(pcRef.current);
-        setCallState('connected');
-      } catch (err) { console.error('handleAnswer error:', err); }
+        remoteSet.current = true;
+        await drainICE(pcRef.current);
+        go('connected');
+      });
+
+      s.on('ice-candidate', async ({ candidate }) => {
+        if (!candidate) return;
+        if (pcRef.current && remoteSet.current) {
+          try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+        } else {
+          iceBuf.current.push(candidate);
+        }
+      });
+
+      s.on('call-ended', () => {
+        toast('Call ended', { icon: '📞' });
+        reset(false);
+        onEndCall?.();
+      });
+
+      clearInterval(timer);
     };
 
-    const handleCandidate = async ({ candidate }) => {
-      if (!candidate) return;
-      if (pcRef.current && remoteDescSet.current) {
-        try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); }
-        catch (e) { console.warn('addICE error:', e); }
-      } else {
-        pendingCandidates.current.push(candidate);
-      }
-    };
-
-    const handleCallEnded = () => {
-      toast('Call ended', { icon: '📞' });
-      cleanUp(false);
-      if (onEndCall) onEndCall();
-    };
-
-    socket.on('call-answered', handleAnswer);
-    socket.on('ice-candidate', handleCandidate);
-    socket.on('call-ended', handleCallEnded);
+    setup();
+    if (!attached) timer = setInterval(setup, 500);
 
     return () => {
-      socket.off('call-answered', handleAnswer);
-      socket.off('ice-candidate', handleCandidate);
-      socket.off('call-ended', handleCallEnded);
+      clearInterval(timer);
+      const s = getSocket();
+      if (s) { s.off('call-answered'); s.off('ice-candidate'); s.off('call-ended'); }
     };
-  }, [socket, cleanUp, onEndCall]);
+  }, []); // eslint-disable-line
 
-  // Show incoming ring
+  /* ── react to prop changes ───────────────────────────── */
   useEffect(() => {
-    if (incomingCall && callStateRef.current === 'idle') {
-      setCallState('incoming');
-      setRemoteUser({ name: incomingCall.fromName, avatar: incomingCall.fromAvatar });
+    if (incomingCall && phaseRef.current === 'idle') {
+      go('incoming');
+      setPeerName(incomingCall.fromName || '');
+      setPeerAva(incomingCall.fromAvatar || '');
     }
   }, [incomingCall]);
 
-  // Trigger outgoing call when activeConv changes
   useEffect(() => {
-    if (activeConv && callStateRef.current === 'idle') {
-      startCall(activeConv);
-    }
-  }, [activeConv]);
+    if (activeConv && phaseRef.current === 'idle') startCall(activeConv);
+  }, [activeConv]); // eslint-disable-line
 
   const toggleMute = () => {
-    if (!localStreamRef.current) return;
-    const t = localStreamRef.current.getAudioTracks()[0];
+    const t = localRef.current?.getAudioTracks()[0];
     if (t) { t.enabled = !t.enabled; setMuted(!t.enabled); }
   };
-
-  const toggleVideo = () => {
-    if (!localStreamRef.current) return;
-    const t = localStreamRef.current.getVideoTracks()[0];
-    if (t) { t.enabled = !t.enabled; setVideoOff(!t.enabled); }
+  const toggleVid = () => {
+    const t = localRef.current?.getVideoTracks()[0];
+    if (t) { t.enabled = !t.enabled; setVidOff(!t.enabled); }
   };
 
-  const isActive = callState !== 'idle';
+  if (phase === 'idle') return null;
 
   return (
     <AnimatePresence>
-      {isActive && (
-        <motion.div
-          key="vc-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className={`vc-overlay ${isMinimized ? 'vc-minimized' : ''}`}
-        >
-          {/* ── Incoming Ring UI ── */}
-          {callState === 'incoming' && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="vc-ring-card"
-            >
-              <div className="text-center mb-4">
-                <div className="position-relative d-inline-block">
-                  <img
-                    src={remoteUser?.avatar || '/default-avatar.png'}
-                    className="vc-avatar-ring"
-                    width="120" height="120" alt="caller"
-                  />
-                  <div className="vc-video-badge"><LuVideo size={16} className="text-white" /></div>
+      <motion.div key="vc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className={`vc-ol${mini ? ' vc-ol-mini' : ''}`}>
+
+        {/* ── Incoming ring ── */}
+        {phase === 'incoming' && (
+          <motion.div initial={{ scale: .8 }} animate={{ scale: 1 }} className="vc-ring">
+            <div className="text-center mb-4">
+              <div className="position-relative d-inline-block">
+                <img src={peerAva || '/default-avatar.png'} width="110" height="110"
+                  style={{ objectFit:'cover', borderRadius:'50%', border:'4px solid #2563eb' }} alt="" />
+                <div className="vc-vid-dot"><LuVideo size={14} className="text-white" /></div>
+              </div>
+              <h4 className="fw-bold mt-3 mb-0">{peerName || 'Someone'}</h4>
+              <p className="text-muted small">Incoming video call…</p>
+            </div>
+            <div className="d-flex justify-content-center gap-5">
+              <motion.button whileTap={{ scale:.9 }} onClick={rejectCall} className="vc-cir bg-danger border-0 text-white">
+                <LuPhoneOff size={26} />
+              </motion.button>
+              <motion.button whileTap={{ scale:.9 }} onClick={acceptCall} className="vc-cir bg-success border-0 text-white vc-pulse">
+                <LuPhone size={26} />
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Active call ── */}
+        {(phase === 'calling' || phase === 'connected') && (
+          <motion.div layout className={`vc-win ${mini ? 'vc-win-s' : 'vc-win-l'}`}>
+            <div className="position-relative w-100 h-100 overflow-hidden bg-dark">
+
+              {/* Remote full-screen video */}
+              <video ref={remoteVid} autoPlay playsInline
+                style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+
+              {/* Waiting overlay */}
+              {phase === 'calling' && (
+                <div className="vc-waiting">
+                  <motion.img src={peerAva || '/default-avatar.png'}
+                    animate={{ scale:[1,1.07,1] }} transition={{ repeat:Infinity, duration:2 }}
+                    width="130" height="130"
+                    style={{ objectFit:'cover', borderRadius:'50%', border:'4px solid #3b82f6' }} alt="" />
+                  <h3 className="text-white fw-bold mt-3">{peerName}</h3>
+                  <div className="d-flex align-items-center gap-2 text-white-50 mt-1">
+                    <span className="spinner-grow spinner-grow-sm text-primary" />
+                    <small>Ringing…</small>
+                  </div>
                 </div>
-                <h3 className="fw-bold mt-3 mb-1">{remoteUser?.name || 'Someone'}</h3>
-                <p className="text-secondary mb-0">Incoming video call...</p>
-              </div>
-              <div className="d-flex justify-content-center gap-5">
-                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                  onClick={rejectCall} className="vc-btn-circle bg-danger">
-                  <LuPhoneOff size={28} />
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                  onClick={acceptCall} className="vc-btn-circle bg-success vc-bounce">
-                  <LuPhone size={28} />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
+              )}
 
-          {/* ── Active Call UI ── */}
-          {(callState === 'calling' || callState === 'connected') && (
-            <motion.div layout
-              className={`vc-window ${isMinimized ? 'vc-window-mini' : 'vc-window-full'}`}
-            >
-              <div className="position-relative w-100 h-100 overflow-hidden bg-dark">
-                {/* Remote video – full screen */}
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="vc-remote-video"
-                />
-
-                {/* Waiting overlay while still "calling" */}
-                {callState === 'calling' && (
-                  <div className="vc-calling-overlay">
-                    <motion.img
-                      src={remoteUser?.avatar || '/default-avatar.png'}
-                      animate={{ scale: [1, 1.07, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="rounded-circle mb-3 shadow"
-                      style={{ border: '4px solid #2563eb' }}
-                      width="140" height="140" alt=""
-                    />
-                    <h2 className="fw-bold text-white mb-2">{remoteUser?.name}</h2>
-                    <div className="d-flex align-items-center gap-2 text-white opacity-75">
-                      <span className="spinner-grow spinner-grow-sm text-primary" />
-                      <span>Calling...</span>
+              {/* Local PIP */}
+              {!mini && (
+                <div className="vc-pip">
+                  <video ref={localVid} autoPlay playsInline muted
+                    style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  {vidOff && (
+                    <div style={{ position:'absolute', inset:0, background:'#334155', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <LuUser size={28} className="text-white" />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
 
-                {/* Local PIP camera */}
-                {!isMinimized && (
-                  <div className="vc-pip">
-                    <video ref={localVideoRef} autoPlay playsInline muted className="vc-pip-video" />
-                    {videoOff && (
-                      <div className="vc-pip-off">
-                        <LuUser size={28} className="text-white" />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Controls bar */}
-                <div className={`vc-controls ${isMinimized ? 'vc-controls-mini' : ''}`}>
-                  <div className="vc-ctrl-bar">
-                    <button
-                      onClick={toggleMute}
-                      className={`vc-btn ${muted ? 'vc-btn-red' : ''}`}
-                      title={muted ? 'Unmute' : 'Mute'}
-                    >
-                      {muted ? <LuMicOff size={20} /> : <LuMic size={20} />}
-                    </button>
-                    <button onClick={endCall} className="vc-btn vc-btn-end" title="End Call">
-                      <LuPhoneOff size={24} />
-                    </button>
-                    <button
-                      onClick={toggleVideo}
-                      className={`vc-btn ${videoOff ? 'vc-btn-red' : ''}`}
-                      title={videoOff ? 'Show camera' : 'Hide camera'}
-                    >
-                      {videoOff ? <LuVideoOff size={20} /> : <LuVideo size={20} />}
-                    </button>
-                    <button
-                      onClick={() => setIsMinimized(m => !m)}
-                      className="vc-btn d-none d-md-flex"
-                      title="Minimize"
-                    >
-                      {isMinimized ? <LuMaximize2 size={18} /> : <LuMinimize2 size={18} />}
-                    </button>
-                  </div>
+              {/* Controls */}
+              <div className={`vc-ctrl${mini ? ' vc-ctrl-s' : ''}`}>
+                <div className="vc-bar">
+                  <button onClick={toggleMute} className={`vc-b${muted?' vc-b-r':''}`} title={muted?'Unmute':'Mute'}>
+                    {muted ? <LuMicOff size={20}/> : <LuMic size={20}/>}
+                  </button>
+                  <button onClick={hangUp} className="vc-b vc-b-end" title="End Call">
+                    <LuPhoneOff size={22}/>
+                  </button>
+                  <button onClick={toggleVid} className={`vc-b${vidOff?' vc-b-r':''}`} title="Camera">
+                    {vidOff ? <LuVideoOff size={20}/> : <LuVideo size={20}/>}
+                  </button>
+                  <button onClick={() => setMini(m=>!m)} className="vc-b d-none d-md-flex">
+                    {mini ? <LuMaximize2 size={18}/> : <LuMinimize2 size={18}/>}
+                  </button>
                 </div>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </motion.div>
+        )}
 
-          <style dangerouslySetInnerHTML={{ __html: `
-            .vc-overlay {
-              position: fixed; inset: 0; z-index: 99999;
-              display: flex; align-items: center; justify-content: center;
-              background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
-            }
-            .vc-overlay.vc-minimized {
-              background: transparent !important; backdrop-filter: none !important;
-              pointer-events: none;
-            }
-            .vc-ring-card {
-              background: #fff; border-radius: 1.75rem;
-              padding: 2.5rem 2rem; width: 360px; max-width: 92vw;
-              box-shadow: 0 32px 64px rgba(0,0,0,0.45);
-            }
-            .vc-avatar-ring {
-              border-radius: 50%; object-fit: cover;
-              border: 4px solid #2563eb;
-            }
-            .vc-video-badge {
-              position: absolute; bottom: 2px; right: 2px;
-              background: #22c55e; border-radius: 50%;
-              width: 34px; height: 34px;
-              display: flex; align-items: center; justify-content: center;
-              border: 3px solid white;
-            }
-            .vc-btn-circle {
-              width: 72px; height: 72px; border-radius: 50%; border: none;
-              display: flex; align-items: center; justify-content: center;
-              color: white; cursor: pointer; transition: opacity .15s;
-            }
-            .vc-btn-circle:hover { opacity: .85; }
-            .vc-bounce { animation: vcB 1.6s ease-in-out infinite; }
-            @keyframes vcB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-
-            .vc-window { border-radius: 2rem; overflow: hidden; }
-            .vc-window-full {
-              width: 95vw; height: 92vh;
-              box-shadow: 0 30px 80px rgba(0,0,0,0.7);
-            }
-            .vc-window-mini {
-              position: fixed; bottom: 1.5rem; right: 1.5rem;
-              width: 220px; height: 310px; border-radius: 1.25rem;
-              pointer-events: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            }
-            @media (max-width: 768px) {
-              .vc-window-full { width:100vw; height:100vh; border-radius:0; }
-              .vc-pip { width:100px!important; height:140px!important; bottom:6rem!important; right:.75rem!important; }
-              .vc-controls { bottom:1rem!important; }
-            }
-
-            .vc-remote-video {
-              width: 100%; height: 100%; object-fit: cover; display: block;
-            }
-            .vc-calling-overlay {
-              position:absolute; inset:0; z-index:10;
-              display:flex; flex-direction:column;
-              align-items:center; justify-content:center;
-              background:rgba(0,0,0,0.55);
-            }
-            .vc-pip {
-              position:absolute; bottom:4rem; right:1.5rem;
-              width:160px; height:120px; border-radius:.9rem; overflow:hidden;
-              border:2px solid rgba(255,255,255,.25); z-index:20;
-              background:#1e293b; box-shadow:0 4px 24px rgba(0,0,0,.5);
-            }
-            .vc-pip-video { width:100%; height:100%; object-fit:cover; }
-            .vc-pip-off {
-              position:absolute; inset:0; background:#334155;
-              display:flex; align-items:center; justify-content:center;
-            }
-
-            .vc-controls {
-              position:absolute; bottom:2rem; left:50%; transform:translateX(-50%); z-index:30;
-            }
-            .vc-controls-mini { bottom:0; transform:translateX(-50%) scale(.7); }
-            .vc-ctrl-bar {
-              display:flex; align-items:center; gap:.75rem;
-              background:rgba(0,0,0,.55); backdrop-filter:blur(16px);
-              border:1px solid rgba(255,255,255,.12);
-              border-radius:9999px; padding:.65rem 1.25rem;
-            }
-            .vc-btn {
-              width:52px; height:52px; border-radius:50%; border:none;
-              display:flex; align-items:center; justify-content:center;
-              background:rgba(255,255,255,.15); color:#fff; cursor:pointer;
-              transition:background .15s;
-            }
-            .vc-btn:hover { background:rgba(255,255,255,.25); }
-            .vc-btn-red { background:#ef4444 !important; }
-            .vc-btn-red:hover { background:#dc2626 !important; }
-            .vc-btn-end {
-              width:64px; height:64px;
-              background:#ef4444 !important;
-            }
-            .vc-btn-end:hover { background:#dc2626 !important; }
-          `}} />
-        </motion.div>
-      )}
+        <style>{`
+          .vc-ol{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);backdrop-filter:blur(18px)}
+          .vc-ol-mini{background:transparent!important;backdrop-filter:none!important;pointer-events:none}
+          .vc-ring{background:#fff;border-radius:1.5rem;padding:2.5rem 2rem;width:340px;max-width:92vw;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+          .vc-vid-dot{position:absolute;bottom:2px;right:2px;background:#22c55e;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:3px solid #fff}
+          .vc-cir{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+          .vc-pulse{animation:vcPulse 1.4s ease-in-out infinite}
+          @keyframes vcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+          .vc-win{border-radius:1.5rem;overflow:hidden}
+          .vc-win-l{width:95vw;height:92vh;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+          .vc-win-s{position:fixed;bottom:1.5rem;right:1.5rem;width:220px;height:310px;border-radius:1.25rem;pointer-events:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+          @media(max-width:768px){.vc-win-l{width:100vw;height:100vh;border-radius:0}.vc-pip{width:100px!important;height:140px!important;bottom:5.5rem!important;right:.75rem!important}}
+          .vc-waiting{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+          .vc-pip{position:absolute;bottom:4rem;right:1.5rem;width:150px;height:110px;border-radius:.75rem;overflow:hidden;border:2px solid rgba(255,255,255,.25);z-index:20;background:#1e293b;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+          .vc-ctrl{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);z-index:30}
+          .vc-ctrl-s{bottom:.5rem;transform:translateX(-50%) scale(.7)}
+          .vc-bar{display:flex;align-items:center;gap:.75rem;background:rgba(0,0,0,.55);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:9999px;padding:.6rem 1.2rem}
+          .vc-b{width:52px;height:52px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;transition:background .15s}
+          .vc-b:hover{background:rgba(255,255,255,.25)}
+          .vc-b-r{background:#ef4444!important}.vc-b-r:hover{background:#dc2626!important}
+          .vc-b-end{width:62px;height:62px;background:#ef4444!important}.vc-b-end:hover{background:#dc2626!important}
+        `}</style>
+      </motion.div>
     </AnimatePresence>
   );
 }
