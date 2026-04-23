@@ -14,31 +14,46 @@ export default function AppLayout() {
   const [activeCallConv, setActiveCallConv] = React.useState(null);
 
   React.useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    let cleanup = null;
 
-    const handleIncomingCall = (call) => {
-      setIncomingCall(call);
+    const attach = () => {
+      const socket = getSocket();
+      if (!socket) return false;
+
+      const handleIncomingCall = (call) => {
+        console.log('[AppLayout] incoming-call', call);
+        setIncomingCall(call);
+      };
+      const handleCallEnded = () => {
+        console.log('[AppLayout] call-ended');
+        setIncomingCall(null);
+      };
+      const handleTriggerCall = (e) => {
+        console.log('[AppLayout] trigger-call', e.detail);
+        setActiveCallConv(e.detail);
+      };
+
+      socket.on('incoming-call', handleIncomingCall);
+      socket.on('call-ended', handleCallEnded);
+      window.addEventListener('trigger-call', handleTriggerCall);
+
+      cleanup = () => {
+        socket.off('incoming-call', handleIncomingCall);
+        socket.off('call-ended', handleCallEnded);
+        window.removeEventListener('trigger-call', handleTriggerCall);
+      };
+      return true;
     };
 
-    const handleCallEnded = () => {
-      setIncomingCall(null);
-    };
+    // Try immediately; if socket not ready yet, retry every 300ms
+    if (!attach()) {
+      const interval = setInterval(() => {
+        if (attach()) clearInterval(interval);
+      }, 300);
+      return () => { clearInterval(interval); if (cleanup) cleanup(); };
+    }
 
-    socket.on('incoming-call', handleIncomingCall);
-    socket.on('call-ended', handleCallEnded);
-
-    // Global listener for initiating calls from messages page or elsewhere
-    const handleTriggerCall = (e) => {
-      setActiveCallConv(e.detail);
-    };
-    window.addEventListener('trigger-call', handleTriggerCall);
-
-    return () => {
-      socket.off('incoming-call', handleIncomingCall);
-      socket.off('call-ended', handleCallEnded);
-      window.removeEventListener('trigger-call', handleTriggerCall);
-    };
+    return () => { if (cleanup) cleanup(); };
   }, []);
 
   const handleLogout = () => {

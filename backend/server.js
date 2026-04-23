@@ -75,20 +75,30 @@ io.on('connection', (socket) => {
   });
 
   // ── Video Call Signaling ───────────────────────────────────────────
-  socket.on('call-user', ({ to, offer, fromName, fromAvatar }) => {
-    if (to) {
-      io.to(String(to)).emit('incoming-call', { from: socket.userId || to, offer, fromName, fromAvatar, callerId: socket.userId });
+  // IMPORTANT: socket.userId can be undefined at call time, so client must send callerId
+  socket.on('call-user', ({ to, offer, fromName, fromAvatar, callerId }) => {
+    const from = callerId || socket.userId;
+    if (to && from && offer) {
+      console.log(`[call] ${from} calling ${to}`);
+      io.to(String(to)).emit('incoming-call', {
+        from,
+        callerId: from,
+        offer,
+        fromName,
+        fromAvatar,
+      });
     }
   });
 
   socket.on('answer-call', ({ to, answer }) => {
-    if (to) {
+    if (to && answer) {
+      console.log(`[answer] answer sent to ${to}`);
       io.to(String(to)).emit('call-answered', { answer });
     }
   });
 
   socket.on('ice-candidate', ({ to, candidate }) => {
-    if (to) {
+    if (to && candidate) {
       io.to(String(to)).emit('ice-candidate', { candidate });
     }
   });
@@ -101,8 +111,9 @@ io.on('connection', (socket) => {
 
   socket.on('join', (userId) => {
     if (userId) {
-      socket.userId = userId;
+      socket.userId = String(userId);
       socket.join(String(userId));
+      console.log(`[socket] user ${userId} joined`);
     }
   });
 });
