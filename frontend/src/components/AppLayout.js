@@ -40,50 +40,53 @@ export default function AppLayout() {
           </button>
           
           <div className="collapse navbar-collapse" id="navbarMain">
-            <ul className="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
-              {navItems.map((item) => (
-                <li className="nav-item" key={item.to}>
-                  <NavLink 
-                    className={({ isActive }) => 
-                      `nav-link d-flex align-items-center gap-2 px-3 py-2 rounded-pill transition-all ${
-                        isActive 
-                        ? 'bg-primary-light text-primary fw-semibold' 
-                        : 'text-secondary hover:bg-light'
-                      }`
-                    } 
-                    to={item.to}
+            <div className="d-flex flex-column flex-lg-row w-100 justify-content-between align-items-start align-items-lg-center mt-3 mt-lg-0 bg-white bg-lg-transparent p-3 p-lg-0 rounded-4 shadow-sm shadow-lg-none border border-light border-lg-0">
+              <ul className="navbar-nav mx-auto mb-3 mb-lg-0 gap-2 w-100 w-lg-auto">
+                {navItems.map((item) => (
+                  <li className="nav-item w-100 w-lg-auto" key={item.to}>
+                    <NavLink 
+                      className={({ isActive }) => 
+                        `nav-link d-flex align-items-center gap-2 px-3 py-2 rounded-3 transition-all w-100 ${
+                          isActive 
+                          ? 'bg-primary-light text-primary fw-semibold' 
+                          : 'text-secondary hover-bg-light hover-text-primary'
+                        }`
+                      } 
+                      to={item.to}
+                    >
+                      <item.icon size={20} />
+                      <span className="fs-6">{item.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="d-flex flex-row flex-lg-row align-items-center gap-3 mt-2 mt-lg-0 w-100 w-lg-auto justify-content-between justify-content-lg-end pt-3 pt-lg-0 border-top border-lg-0 border-light">
+                <NavLink to="/profile" className="nav-link p-0 text-decoration-none flex-grow-1 flex-lg-grow-0">
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="d-flex align-items-center gap-3 bg-light p-2 pe-3 pe-lg-4 rounded-pill border"
                   >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-            
-            <div className="navbar-nav align-items-center gap-3">
-              <NavLink to="/profile" className="nav-link p-0">
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="d-flex align-items-center gap-2 bg-light p-1 pe-3 rounded-pill border"
-                >
-                  <img 
-                    src={user?.avatar || "/default-avatar.png"} 
-                    alt={user?.name} 
-                    width="32" 
-                    height="32" 
-                    className="rounded-circle" 
-                  />
-                  <span className="small fw-semibold text-dark d-none d-sm-inline">{user?.name?.split(' ')[0]}</span>
-                </motion.div>
-              </NavLink>
+                    <img 
+                      src={user?.avatar || "/default-avatar.png"} 
+                      alt={user?.name} 
+                      width="36" 
+                      height="36" 
+                      className="rounded-circle shadow-sm" 
+                    />
+                    <span className="fw-semibold text-dark text-truncate" style={{maxWidth: '120px'}}>{user?.name?.split(' ')[0]}</span>
+                  </motion.div>
+                </NavLink>
 
-              <button 
-                onClick={handleLogout} 
-                className="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center border text-danger"
-                title="Sign Out"
-              >
-                <LuLogOut size={20} />
-              </button>
+                <button 
+                  onClick={handleLogout} 
+                  className="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center border text-danger flex-shrink-0"
+                  style={{width: '40px', height: '40px'}}
+                  title="Sign Out"
+                >
+                  <LuLogOut size={20} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

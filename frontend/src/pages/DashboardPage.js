@@ -82,7 +82,7 @@ export default function DashboardPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card overflow-hidden mb-5 border-0 shadow-lg"
+        className="glass-card overflow-hidden position-relative mb-5 border-0 shadow-lg"
         style={{ background: 'linear-gradient(135deg, #2563EB 0%, #10B981 100%)' }}
       >
         <div className="card-body p-4 p-md-5 text-white position-relative">
@@ -101,8 +101,8 @@ export default function DashboardPage() {
               <LuArrowRight />
             </Link>
           </div>
-          {/* Decorative shapes */}
-          <div className="position-absolute top-0 end-0 p-5 mt-n5 me-n5 opacity-10">
+          {/* Decorative shapes - Hidden on mobile for cleaner look and to prevent scroll issues */}
+          <div className="position-absolute top-0 end-0 p-5 mt-n5 me-n5 opacity-10 d-none d-md-block pointer-events-none">
             <LuUsers size={300} />
           </div>
         </div>
