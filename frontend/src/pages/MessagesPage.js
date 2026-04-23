@@ -25,7 +25,6 @@ export default function MessagesPage() {
   const [connections, setConnections] = useState([]);
   const [completingSwap, setCompletingSwap] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingConn, setRatingConn] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
@@ -140,23 +139,17 @@ export default function MessagesPage() {
 
     const handleTyping = () => setTyping(true);
     const handleStopTyping = () => setTyping(false);
-    const handleIncomingCall = (call) => setIncomingCall(call);
-    const handleCallEnded = () => setIncomingCall(null);
 
     socket.on('receiveMessage', handleReceiveMessage);
     socket.on('newMessage', handleReceiveMessage);
     socket.on('typing', handleTyping);
     socket.on('stopTyping', handleStopTyping);
-    socket.on('incoming-call', handleIncomingCall);
-    socket.on('call-ended', handleCallEnded);
 
     return () => {
       socket.off('receiveMessage', handleReceiveMessage);
       socket.off('newMessage', handleReceiveMessage);
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
-      socket.off('incoming-call', handleIncomingCall);
-      socket.off('call-ended', handleCallEnded);
     };
   }, [activeConv, loadConversations, scrollToBottom, user]);
 
@@ -438,7 +431,15 @@ export default function MessagesPage() {
                   
                   <div className="d-flex align-items-center gap-1 gap-sm-2">
                     <button
-                      onClick={() => setActiveConv(prev => ({ ...prev, triggerCall: true }))}
+                      onClick={async () => {
+                        // Notify the chat that a call is being started
+                        try {
+                          await api.post(`/messages/${activeConv.id}`, { content: "📞 Video call started..." });
+                          loadConversations();
+                        } catch (err) {}
+                        
+                        window.dispatchEvent(new CustomEvent('trigger-call', { detail: activeConv }));
+                      }}
                       className="btn btn-light border bg-white text-primary p-2 p-sm-2 rounded-circle rounded-sm-pill d-flex align-items-center justify-content-center gap-2 shadow-none"
                       title="Video Call"
                     >
@@ -541,7 +542,19 @@ export default function MessagesPage() {
                                     )}
                                   </div>
                                 )}
-                                {msg.content && <p className="mb-0 fs-6 leading-relaxed" style={{ wordBreak: 'break-word' }}>{msg.content}</p>}
+                                {msg.content && (
+                                  <div>
+                                    <p className="mb-0 fs-6 leading-relaxed" style={{ wordBreak: 'break-word' }}>{msg.content}</p>
+                                    {!isMe && msg.content === "📞 Video call started..." && (
+                                      <button 
+                                        onClick={() => window.dispatchEvent(new CustomEvent('trigger-call', { detail: activeConv }))}
+                                        className="btn btn-sm btn-success rounded-pill mt-2 px-3 fw-bold d-flex align-items-center gap-1 shadow-sm"
+                                      >
+                                        <LuVideo size={14} /> Join Now
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <small className="smaller opacity-50 fw-bold mt-1 text-uppercase tracking-tighter" style={{ fontSize: '0.6rem' }}>
                                 {msg.createdAt ? formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true }) : 'Just now'}
@@ -651,12 +664,6 @@ export default function MessagesPage() {
         )}
       </AnimatePresence>
 
-      <VideoCallOverlay
-        user={user}
-        activeConv={activeConv}
-        incomingCall={incomingCall}
-        onEndCall={() => setIncomingCall(null)}
-      />
 
       {/* ── Rating Modal ── */}
       <AnimatePresence>

@@ -97,6 +97,9 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
   // Start a call
   const startCall = async () => {
     if (!activeConv) return;
+    if (localStream || pc.current) {
+        cleanUp();
+    }
     setIsCalling(true);
     const stream = await initLocalStream();
     if (!stream) return;
@@ -202,9 +205,9 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
 
   // Start call logic trigger
   useEffect(() => {
-    if (activeConv && activeConv.triggerCall) {
+    // If activeConv is passed and we aren't already in a call/incoming, start it
+    if (activeConv && !isCalling && !isAccepted && !isIncoming) {
       startCall();
-      activeConv.triggerCall = false;
     }
   }, [activeConv]);
 
@@ -366,8 +369,8 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
               align-items: center;
               justify-content: center;
               z-index: 99999;
-              background: rgba(15, 23, 42, 0.85);
-              backdrop-filter: blur(12px);
+              background: rgba(15, 23, 42, 0.9);
+              backdrop-filter: blur(20px);
             }
             .video-call-fixed-overlay.minimized {
               background: transparent;
@@ -384,9 +387,35 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
               border: none;
             }
             .fullscreen-window {
-              width: 92vw;
+              width: 95vw;
               height: 92vh;
-              border-radius: 3rem;
+              border-radius: 2.5rem;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+            @media (max-width: 768px) {
+              .fullscreen-window {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+              }
+              .local-preview-container {
+                width: 110px !important;
+                height: 160px !important;
+                bottom: 7rem !important;
+                right: 1.5rem !important;
+                border-radius: 1rem !important;
+              }
+              .controls-container {
+                bottom: 2rem !important;
+              }
+              .btn-icon {
+                width: 50px !important;
+                height: 50px !important;
+              }
+              .btn-end {
+                width: 70px !important;
+                height: 70px !important;
+              }
             }
             .minimized-window {
               position: fixed;
@@ -399,28 +428,32 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
             }
             .local-preview-container {
               position: absolute;
-              bottom: 2.5rem;
-              right: 2.5rem;
-              width: 320px;
-              height: 200px;
+              bottom: 3.5rem;
+              right: 3.5rem;
+              width: 240px;
+              height: 160px;
               z-index: 100;
-              background: #334155;
+              background: #1e293b;
+              border: 2px solid rgba(255, 255, 255, 0.2);
+              border-radius: 1.5rem;
+              transition: all 0.3s ease;
             }
             .controls-container {
               position: absolute;
-              bottom: 3rem;
+              bottom: 4rem;
               left: 50%;
               transform: translateX(-50%);
               z-index: 200;
+              width: fit-content;
             }
             .controls-container.minimized-controls {
               bottom: 1rem;
               transform: translateX(-50%) scale(0.65);
             }
             .glass-panel {
-              background: rgba(255, 255, 255, 0.1);
+              background: rgba(15, 23, 42, 0.6);
               backdrop-filter: blur(20px);
-              border: 1px solid rgba(255, 255, 255, 0.2);
+              border: 1px solid rgba(255, 255, 255, 0.1);
             }
             .btn-icon {
               width: 60px;
@@ -429,13 +462,15 @@ export default function VideoCallOverlay({ user, activeConv, incomingCall, onEnd
               display: flex;
               align-items: center;
               justify-content: center;
+              font-size: 1.25rem;
             }
             .btn-light-subtle {
-              background: rgba(255, 255, 255, 0.2);
+              background: rgba(255, 255, 255, 0.15);
               color: white;
+              border: none;
             }
             .btn-light-subtle:hover {
-              background: rgba(255, 255, 255, 0.3);
+              background: rgba(255, 255, 255, 0.25);
               color: white;
             }
             .btn-end {

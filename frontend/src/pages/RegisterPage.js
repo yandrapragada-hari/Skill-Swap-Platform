@@ -3,24 +3,38 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { LuUser, LuMail, LuLock, LuArrowRight, LuCircleCheck } from 'react-icons/lu';
+import { LuUser, LuMail, LuLock, LuArrowRight, LuCircleCheck, LuEye, LuEyeOff } from 'react-icons/lu';
 
-const InputField = ({ label, icon: Icon, type, value, onChange, placeholder }) => (
-  <div className="mb-4 text-start">
-    <label className="form-label fw-bold small text-muted text-uppercase tracking-wider">{label}</label>
-    <div className="position-relative">
-      <Icon className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
-      <input
-        type={type}
-        className="form-control form-control-lg border-0 bg-light rounded-xl ps-5 fs-6"
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required
-      />
+const InputField = ({ label, icon: Icon, type, value, onChange, placeholder }) => {
+  const [show, setShow] = useState(false);
+  const isPassword = type === 'password';
+
+  return (
+    <div className="mb-4 text-start">
+      <label className="form-label fw-bold small text-muted text-uppercase tracking-wider">{label}</label>
+      <div className="position-relative">
+        <Icon className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
+        <input
+          type={isPassword ? (show ? 'text' : 'password') : type}
+          className="form-control form-control-lg border-0 bg-light rounded-xl ps-5 fs-6"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          required
+        />
+        {isPassword && (
+          <button 
+            type="button"
+            onClick={() => setShow(!show)}
+            className="btn border-0 position-absolute top-50 end-0 translate-middle-y me-2 text-muted p-2 shadow-none"
+          >
+            {show ? <LuEyeOff size={18} /> : <LuEye size={18} />}
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });

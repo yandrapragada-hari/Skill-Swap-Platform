@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { LuMail, LuLock, LuArrowRight } from 'react-icons/lu';
+import { LuMail, LuLock, LuArrowRight, LuEye, LuEyeOff } from 'react-icons/lu';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -70,13 +71,20 @@ export default function LoginPage() {
               <div className="position-relative">
                 <LuLock className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
                 <input
-                  type="password"
-                  className="form-control form-control-lg border-0 bg-light rounded-xl ps-5 fs-6"
+                  type={showPassword ? "text" : "password"}
+                  className="form-control form-control-lg border-0 bg-light rounded-xl ps-5 pe-5 fs-6"
                   placeholder="Enter secure password"
                   value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                   required
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="btn border-0 position-absolute top-50 end-0 translate-middle-y me-2 text-muted p-2 shadow-none"
+                >
+                  {showPassword ? <LuEyeOff size={18} /> : <LuEye size={18} />}
+                </button>
               </div>
             </div>
             

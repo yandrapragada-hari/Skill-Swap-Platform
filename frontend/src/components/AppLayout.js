@@ -3,10 +3,43 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LuLayoutDashboard, LuUsers, LuMessageSquare, LuUser, LuLogOut, LuGlobe } from 'react-icons/lu';
 import { motion } from 'framer-motion';
+import { getSocket } from '../services/socket';
+import VideoCallOverlay from './VideoCallOverlay';
+import toast from 'react-hot-toast';
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [incomingCall, setIncomingCall] = React.useState(null);
+  const [activeCallConv, setActiveCallConv] = React.useState(null);
+
+  React.useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleIncomingCall = (call) => {
+      setIncomingCall(call);
+    };
+
+    const handleCallEnded = () => {
+      setIncomingCall(null);
+    };
+
+    socket.on('incoming-call', handleIncomingCall);
+    socket.on('call-ended', handleCallEnded);
+
+    // Global listener for initiating calls from messages page or elsewhere
+    const handleTriggerCall = (e) => {
+      setActiveCallConv(e.detail);
+    };
+    window.addEventListener('trigger-call', handleTriggerCall);
+
+    return () => {
+      socket.off('incoming-call', handleIncomingCall);
+      socket.off('call-ended', handleCallEnded);
+      window.removeEventListener('trigger-call', handleTriggerCall);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -65,7 +98,7 @@ export default function AppLayout() {
                 <NavLink to="/profile" className="nav-link p-0 text-decoration-none w-100 w-lg-auto">
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="d-flex align-items-center gap-3 bg-light p-2 pe-3 pe-lg-4 rounded-pill border w-100"
+                    className="d-flex align-items-center gap-2 gap-sm-3 bg-light p-1 pe-2 pe-sm-3 rounded-pill border w-100"
                   >
                     <img 
                       src={user?.avatar || "/default-avatar.png"} 
@@ -111,6 +144,16 @@ export default function AppLayout() {
       >
         <Outlet />
       </motion.main>
+
+      <VideoCallOverlay 
+        user={user}
+        activeConv={activeCallConv}
+        incomingCall={incomingCall}
+        onEndCall={() => {
+          setIncomingCall(null);
+          setActiveCallConv(null);
+        }}
+      />
     </div>
   );
 }

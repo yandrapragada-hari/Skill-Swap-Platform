@@ -45,7 +45,7 @@ export default function ProfilePage() {
                 <h1 className="fw-bold mb-1">My Profile</h1>
                 <p className="text-secondary mb-0 small small-md-base">Manage your public presence and expert identity.</p>
             </div>
-            <Link to="/profile/edit" className="btn btn-premium btn-premium-primary text-white shadow w-100 w-sm-auto justify-content-center">
+            <Link to="/profile/edit" className="btn btn-premium btn-premium-primary text-white shadow w-100 w-sm-auto justify-content-center px-4 py-2">
               <LuPencil /> Edit Profile
             </Link>
           </div>
@@ -57,7 +57,7 @@ export default function ProfilePage() {
             className="glass-card mb-5 border-0 bg-white shadow-lg overflow-hidden"
           >
             <div className="bg-primary-light h-32 w-100" style={{ height: '120px' }}></div>
-            <div className="card-body p-4 p-md-5 pt-0">
+            <div className="card-body p-3 p-md-4 pt-0">
               <div className="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-3 gap-md-4 mb-4 mb-md-5" style={{ marginTop: '-60px' }}>
                 <div className="position-relative">
                    <img 
@@ -130,7 +130,7 @@ export default function ProfilePage() {
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass-card h-100 border-0 shadow bg-white p-4 p-md-5"
+                className="glass-card h-100 border-0 shadow bg-white p-3 p-md-4"
               >
                 <div className="d-flex align-items-center gap-3 mb-4">
                     <div className="bg-primary-light text-primary p-3 rounded-circle"><LuBookOpen size={28} /></div>
@@ -154,7 +154,7 @@ export default function ProfilePage() {
                <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass-card h-100 border-0 shadow bg-white p-4 p-md-5"
+                className="glass-card h-100 border-0 shadow bg-white p-3 p-md-4"
               >
                 <div className="d-flex align-items-center gap-3 mb-4">
                     <div className="bg-success-light text-success p-3 rounded-circle"><LuGraduationCap size={28} /></div>

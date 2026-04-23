@@ -98,7 +98,7 @@ export default function EditProfilePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onSubmit={handleSubmit} 
-            className="glass-card border-0 p-4 p-md-5 bg-white shadow-lg"
+            className="glass-card border-0 p-3 p-md-4 bg-white shadow-lg"
           >
             <div className="row g-4 mb-5">
                 <div className="col-12">
@@ -240,21 +240,21 @@ export default function EditProfilePage() {
               <button 
                 type="button" 
                 onClick={() => navigate('/profile')} 
-                className="btn btn-premium border bg-white px-5 py-3 fw-bold"
+                className="btn btn-premium border bg-white px-4 py-2 fw-bold"
               >
                 Cancel
               </button>
               <button 
                 type="submit" 
-                className="btn btn-premium btn-premium-primary px-5 py-3 shadow-lg fs-6" 
+                className="btn btn-premium btn-premium-primary px-4 py-2 shadow-lg fs-6" 
                 disabled={loading}
               >
                 {loading ? (
                     <span className="spinner-border spinner-border-sm me-2"></span>
                 ) : (
-                    <LuSave size={20} />
+                    <LuSave size={18} className="me-2" />
                 )}
-                Save Account Updates
+                Save Changes
               </button>
             </div>
           </motion.form>
