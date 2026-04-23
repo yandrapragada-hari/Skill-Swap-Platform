@@ -152,6 +152,8 @@ export default function AppLayout() {
         onEndCall={() => {
           setIncomingCall(null);
           setActiveCallConv(null);
+          // Notify MessagesPage that the call is over
+          window.dispatchEvent(new CustomEvent('call-ended-global'));
         }}
       />
     </div>

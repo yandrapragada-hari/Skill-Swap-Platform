@@ -6,8 +6,7 @@ import { getSocket } from '../services/socket';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LuMessageSquare, LuPlus, LuSearch, LuArrowLeft, LuArrowRight, LuSend, LuInfo, LuHeart, LuTarget, LuZap, LuCircleCheck, LuStar, LuPaperclip, LuDownload, LuFile, LuTrash2, LuVideo } from 'react-icons/lu';
-import VideoCallOverlay from '../components/VideoCallOverlay';
+import { LuMessageSquare, LuPlus, LuSearch, LuArrowLeft, LuArrowRight, LuSend, LuHeart, LuZap, LuCircleCheck, LuStar, LuPaperclip, LuDownload, LuFile, LuVideo } from 'react-icons/lu';
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -25,6 +24,7 @@ export default function MessagesPage() {
   const [connections, setConnections] = useState([]);
   const [completingSwap, setCompletingSwap] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [callActive, setCallActive] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingConn, setRatingConn] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
@@ -152,6 +152,18 @@ export default function MessagesPage() {
       socket.off('stopTyping', handleStopTyping);
     };
   }, [activeConv, loadConversations, scrollToBottom, user]);
+
+  // Track whether a call is currently active (hide Join Now while in a call)
+  useEffect(() => {
+    const onStart = () => setCallActive(true);
+    const onEnd = () => setCallActive(false);
+    window.addEventListener('trigger-call', onStart);
+    window.addEventListener('call-ended-global', onEnd);
+    return () => {
+      window.removeEventListener('trigger-call', onStart);
+      window.removeEventListener('call-ended-global', onEnd);
+    };
+  }, []);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -432,12 +444,10 @@ export default function MessagesPage() {
                   <div className="d-flex align-items-center gap-1 gap-sm-2">
                     <button
                       onClick={async () => {
-                        // Notify the chat that a call is being started
                         try {
                           await api.post(`/messages/${activeConv.id}`, { content: "📞 Video call started..." });
                           loadConversations();
                         } catch (err) {}
-                        
                         window.dispatchEvent(new CustomEvent('trigger-call', { detail: activeConv }));
                       }}
                       className="btn btn-light border bg-white text-primary p-2 p-sm-2 rounded-circle rounded-sm-pill d-flex align-items-center justify-content-center gap-2 shadow-none"
@@ -545,8 +555,9 @@ export default function MessagesPage() {
                                 {msg.content && (
                                   <div>
                                     <p className="mb-0 fs-6 leading-relaxed" style={{ wordBreak: 'break-word' }}>{msg.content}</p>
-                                    {!isMe && msg.content === "📞 Video call started..." && (
-                                      <button 
+                                    {/* Show Join Now only for the last call message, only to the recipient, and only when no call is active */}
+                                    {!isMe && msg.content === "📞 Video call started..." && !callActive && i === messages.length - 1 && (
+                                      <button
                                         onClick={() => window.dispatchEvent(new CustomEvent('trigger-call', { detail: activeConv }))}
                                         className="btn btn-sm btn-success rounded-pill mt-2 px-3 fw-bold d-flex align-items-center gap-1 shadow-sm"
                                       >
