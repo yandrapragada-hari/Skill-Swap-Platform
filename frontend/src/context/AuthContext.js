@@ -1,13 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { connectSocket, disconnectSocket } from '../services/socket';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken]   = useState(localStorage.getItem('token'));
+
+  // Reconnect socket whenever we have a confirmed user
+  const ensureSocket = (userId) => {
+    if (userId) connectSocket(String(userId));
+  };
 
   const fetchMe = useCallback(async () => {
     if (!token) { setLoading(false); return; }
@@ -15,10 +21,13 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       const res = await api.get('/auth/me');
       setUser(res.data.user);
+      // Re-connect socket on every page load if token is valid
+      ensureSocket(res.data.user?.id || res.data.user?._id);
     } catch {
       localStorage.removeItem('token');
       setToken(null);
       delete api.defaults.headers.common['Authorization'];
+      disconnectSocket();
     } finally {
       setLoading(false);
     }
@@ -33,6 +42,7 @@ export const AuthProvider = ({ children }) => {
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     setToken(newToken);
     setUser(newUser);
+    ensureSocket(newUser?.id || newUser?._id);
     return res.data;
   };
 
@@ -43,6 +53,7 @@ export const AuthProvider = ({ children }) => {
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     setToken(newToken);
     setUser(newUser);
+    ensureSocket(newUser?.id || newUser?._id);
     return res.data;
   };
 
@@ -51,6 +62,7 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
+    disconnectSocket();
     toast.success('Logged out successfully');
   };
 

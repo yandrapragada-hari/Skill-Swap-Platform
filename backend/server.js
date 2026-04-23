@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -16,6 +17,8 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+// Serve React build
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
@@ -140,6 +143,11 @@ const connectionController = require('./controllers/connectionController');
 app.use('/matches', authMiddleware, (req, res, next) => {
   // Redirect /matches to connections controller getMatches
   connectionController.getMatches(req, res, next);
+});
+
+// ── Catch-all: serve React for any non-API route ─────────────────────
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
 // ── Start ───────────────────────────────────────────────────────────
