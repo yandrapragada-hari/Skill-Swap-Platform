@@ -29,17 +29,24 @@ export default function LandingPage() {
   return (
     <div className="landing-page bg-white min-vh-100">
       {/* Premium Navigation */}
-      <nav className="navbar navbar-expand-lg sticky-top bg-white border-bottom py-4">
+      <nav className="navbar navbar-expand-lg sticky-top bg-white border-bottom py-3 py-lg-4">
         <div className="container">
           <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
             <div className="d-flex align-items-center justify-content-center">
-              <img src="/logo.png" alt="SkillSwap" height="36" className="object-contain" />
+              <img src="/logo.png" alt="SkillSwap" height="32" className="object-contain" />
             </div>
             <span className="fw-bold fs-4 tracking-tighter text-dark">SkillSwap</span>
           </Link>
-          <div className="navbar-nav ms-auto flex-row gap-3">
-            <Link to="/login" className="btn btn-premium border bg-white text-secondary px-4 d-none d-sm-flex">Sign In</Link>
-            <Link to="/register" className="btn btn-premium btn-premium-primary text-white px-4">Get Started</Link>
+          
+          <button className="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#landingNavbar">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+
+          <div className="collapse navbar-collapse" id="landingNavbar">
+            <div className="navbar-nav ms-auto flex-column flex-lg-row align-items-center gap-3 mt-3 mt-lg-0">
+              <Link to="/login" className="btn btn-premium border bg-white text-secondary px-4 w-100 w-lg-auto">Sign In</Link>
+              <Link to="/register" className="btn btn-premium btn-premium-primary text-white px-4 w-100 w-lg-auto">Get Started</Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -57,9 +64,9 @@ export default function LandingPage() {
           <motion.h1 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="display-3 fw-bold mb-4 text-dark tracking-tight"
+            className="display-3 fw-bold mb-4 text-dark tracking-tight px-2"
           >
-            Master Any Skill. <br/><span className="text-primary">Without Spending a Dime.</span>
+            Master Any Skill. <br className="d-none d-md-block"/><span className="text-primary">Without Spending a Dime.</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 30 }}
@@ -103,8 +110,11 @@ export default function LandingPage() {
         </div>
         
         {/* Background Decorative Elements */}
-        <div className="position-absolute top-50 start-50 translate-middle opacity-5 z-n1">
+        <div className="position-absolute top-50 start-50 translate-middle opacity-5 z-n1 d-none d-lg-block">
             <LuUsers size={600} />
+        </div>
+        <div className="position-absolute top-50 start-50 translate-middle opacity-5 z-n1 d-lg-none">
+            <LuUsers size={300} />
         </div>
       </header>
 

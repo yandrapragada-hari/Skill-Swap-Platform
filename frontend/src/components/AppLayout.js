@@ -40,7 +40,7 @@ export default function AppLayout() {
           </button>
           
           <div className="collapse navbar-collapse" id="navbarMain">
-            <div className="d-flex flex-column flex-lg-row w-100 justify-content-between align-items-start align-items-lg-center mt-3 mt-lg-0 bg-white bg-lg-transparent p-3 p-lg-0 rounded-4 shadow-sm shadow-lg-none border border-light border-lg-0">
+            <div className="d-flex flex-column flex-lg-row w-100 justify-content-between align-items-stretch align-items-lg-center mt-3 mt-lg-0 bg-white bg-lg-transparent p-3 p-lg-0 rounded-4 shadow-sm shadow-lg-none border border-light border-lg-0">
               <ul className="navbar-nav mx-auto mb-3 mb-lg-0 gap-2 w-100 w-lg-auto">
                 {navItems.map((item) => (
                   <li className="nav-item w-100 w-lg-auto" key={item.to}>
@@ -61,11 +61,11 @@ export default function AppLayout() {
                 ))}
               </ul>
               
-              <div className="d-flex flex-row flex-lg-row align-items-center gap-3 mt-2 mt-lg-0 w-100 w-lg-auto justify-content-between justify-content-lg-end pt-3 pt-lg-0 border-top border-lg-0 border-light">
-                <NavLink to="/profile" className="nav-link p-0 text-decoration-none flex-grow-1 flex-lg-grow-0">
+              <div className="d-flex flex-column flex-lg-row align-items-center gap-3 mt-2 mt-lg-0 w-100 w-lg-auto pt-3 pt-lg-0 border-top border-lg-0 border-light">
+                <NavLink to="/profile" className="nav-link p-0 text-decoration-none w-100 w-lg-auto">
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="d-flex align-items-center gap-3 bg-light p-2 pe-3 pe-lg-4 rounded-pill border"
+                    className="d-flex align-items-center gap-3 bg-light p-2 pe-3 pe-lg-4 rounded-pill border w-100"
                   >
                     <img 
                       src={user?.avatar || "/default-avatar.png"} 
@@ -75,12 +75,22 @@ export default function AppLayout() {
                       className="rounded-circle shadow-sm" 
                     />
                     <span className="fw-semibold text-dark text-truncate" style={{maxWidth: '120px'}}>{user?.name?.split(' ')[0]}</span>
+                    <span className="ms-auto d-lg-none text-muted small">View Profile</span>
                   </motion.div>
                 </NavLink>
 
                 <button 
                   onClick={handleLogout} 
-                  className="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center border text-danger flex-shrink-0"
+                  className="btn btn-light rounded-pill px-4 py-2 w-100 d-flex align-items-center justify-content-center border text-danger flex-shrink-0 d-lg-none shadow-sm"
+                  title="Sign Out"
+                >
+                  <LuLogOut size={20} className="me-2" />
+                  <span className="fw-semibold text-uppercase tracking-wider small">Sign Out</span>
+                </button>
+
+                <button 
+                  onClick={handleLogout} 
+                  className="btn btn-light rounded-circle p-2 d-none d-lg-flex align-items-center justify-content-center border text-danger flex-shrink-0"
                   style={{width: '40px', height: '40px'}}
                   title="Sign Out"
                 >

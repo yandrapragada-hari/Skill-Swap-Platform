@@ -126,14 +126,14 @@ export default function ConnectionsPage() {
         className="glass-card mb-3 border-0 bg-white"
       >
         <div className="card-body p-4">
-          <div className="d-flex align-items-center gap-4 flex-wrap">
-            <Link to={`/users/${user?.id || user?._id}`}>
+          <div className="d-flex align-items-center gap-3 gap-md-4 flex-wrap flex-md-nowrap">
+            <Link to={`/users/${user?.id || user?._id}`} className="flex-shrink-0">
               <img 
                 src={user?.avatar || "/default-avatar.png"} 
                 alt={user?.name} 
                 className="rounded-circle object-cover border-2 border-white shadow-sm" 
-                width="64" 
-                height="64" 
+                width="60" 
+                height="60" 
               />
             </Link>
             <div className="flex-grow-1 overflow-hidden">
@@ -161,26 +161,26 @@ export default function ConnectionsPage() {
                 </div>
               )}
             </div>
-            <div className="d-flex gap-2 flex-wrap">
+            <div className="d-grid d-md-flex gap-2 w-100 w-md-auto mt-3 mt-md-0" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
               {showActions && isIncoming ? (
                 <>
-                  <button onClick={() => respond(connId, 'accepted')} className="btn btn-premium btn-premium-primary text-white py-2 px-3">
+                  <button onClick={() => respond(connId, 'accepted')} className="btn btn-premium btn-premium-primary text-white py-2 px-3 justify-content-center">
                     <LuCheck className="me-1" /> Accept
                   </button>
-                  <button onClick={() => respond(connId, 'rejected')} className="btn btn-premium border bg-white text-danger py-2 px-3">
+                  <button onClick={() => respond(connId, 'rejected')} className="btn btn-premium border bg-white text-danger py-2 px-3 justify-content-center">
                     <LuX className="me-1" /> Decline
                   </button>
                 </>
               ) : !showActions ? (
                 <>
-                  <Link to={`/messages/${[myId, user?.id || user?._id].sort().join('_')}`} className="btn btn-premium border bg-white text-primary px-3 shadow-none">
+                  <Link to={`/messages/${[myId, user?.id || user?._id].sort().join('_')}`} className="btn btn-premium border bg-white text-primary px-3 py-2 shadow-none d-flex align-items-center justify-content-center">
                     <LuMessageSquare className="me-1" /> Chat
                   </Link>
                   {!isFullyCompleted && !iMarkedComplete && (
                     <button 
                       onClick={() => completeSwap(connId)} 
                       disabled={submitting}
-                      className="btn btn-premium border bg-white text-success px-3 shadow-none"
+                      className="btn btn-premium border bg-white text-success px-3 py-2 shadow-none d-flex align-items-center justify-content-center"
                       title="Mark this swap as complete"
                     >
                       <LuCircleCheck className="me-1" /> Complete
@@ -189,17 +189,17 @@ export default function ConnectionsPage() {
                   {(isFullyCompleted || iMarkedComplete) && !myReview && (
                     <button 
                       onClick={() => setReviewModal(conn)}
-                      className="btn btn-premium border bg-white text-warning px-3 shadow-none"
+                      className="btn btn-premium border bg-white text-warning px-3 py-2 shadow-none d-flex align-items-center justify-content-center"
                     >
                       <LuStar className="me-1" /> Review
                     </button>
                   )}
-                  <button onClick={() => remove(connId)} className="btn btn-premium border bg-white text-danger px-3 shadow-none">
+                  <button onClick={() => remove(connId)} className="btn btn-premium border bg-white text-danger px-3 py-2 shadow-none d-flex align-items-center justify-content-center">
                     <LuTrash2 />
                   </button>
                 </>
               ) : (
-                <div className="bg-warning-light text-warning px-3 py-1 rounded-pill small fw-bold border border-warning-subtle d-flex align-items-center gap-1">
+                <div className="bg-warning-light text-warning px-3 py-2 rounded-pill small fw-bold border border-warning-subtle d-flex align-items-center justify-content-center gap-1">
                   <LuClock size={14} /> Pending
                 </div>
               )}
@@ -220,16 +220,16 @@ export default function ConnectionsPage() {
         <p className="text-secondary mb-0">Manage your skill exchange connections and pending requests.</p>
       </div>
 
-      <div className="glass-card border-0 p-2 mb-5 d-inline-flex gap-2 bg-white shadow-sm rounded-pill">
+      <div className="glass-card border-0 p-1 p-sm-2 mb-5 d-flex flex-wrap flex-sm-nowrap gap-1 gap-sm-2 bg-white shadow-sm rounded-4 rounded-sm-pill w-100 w-sm-auto overflow-hidden">
         {tabs.map((t, i) => (
           <button 
             key={t.label}
             onClick={() => setTab(i)} 
-            className={`btn rounded-pill px-4 py-2 d-flex align-items-center gap-2 fw-semibold transition-all ${tab === i ? 'btn-primary text-white shadow' : 'btn-link text-muted text-decoration-none'}`}
+            className={`btn flex-grow-1 flex-sm-grow-0 rounded-pill px-3 px-sm-4 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold transition-all ${tab === i ? 'btn-primary text-white shadow' : 'btn-link text-muted text-decoration-none'}`}
           >
             <t.icon size={18} />
-            {t.label} 
-            {listCounts[i] > 0 && <span className={`ms-2 px-2 rounded-pill small ${tab === i ? 'bg-white text-primary' : 'bg-light text-muted'}`}>{listCounts[i]}</span>}
+            <span className="d-sm-inline">{t.label}</span>
+            {listCounts[i] > 0 && <span className={`ms-1 ms-sm-2 px-2 rounded-pill small ${tab === i ? 'bg-white text-primary' : 'bg-light text-muted'}`}>{listCounts[i]}</span>}
           </button>
         ))}
       </div>

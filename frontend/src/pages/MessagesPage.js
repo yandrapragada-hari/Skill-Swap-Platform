@@ -419,80 +419,83 @@ export default function MessagesPage() {
                 className="h-100 d-flex flex-column"
               >
                 {/* Chat Header */}
-                <div className="p-4 border-bottom d-flex align-items-center gap-3 bg-white shadow-sm position-relative z-1">
-                  <button onClick={() => setActiveConv(null)} className="btn btn-light rounded-circle p-2 d-md-none border">
+                <div className="p-3 p-md-4 border-bottom d-flex align-items-center gap-2 gap-md-3 bg-white shadow-sm position-relative z-1">
+                  <button onClick={() => setActiveConv(null)} className="btn btn-light rounded-circle p-2 d-md-none border shadow-none flex-shrink-0">
                     <LuArrowLeft size={18} />
                   </button>
-                  <img src={activeConv.participant?.avatar || "/default-avatar.png"} width="48" height="48" className="rounded-circle object-cover border" alt="" />
-                  <div className="flex-grow-1">
+                  <img src={activeConv.participant?.avatar || "/default-avatar.png"} width="40" height="40" className="rounded-circle object-cover border d-none d-sm-block flex-shrink-0" alt="" />
+                  <div className="flex-grow-1 overflow-hidden">
                     <Link to={`/users/${activeConv.participant?.id || activeConv.participant?._id}`} className="text-decoration-none">
-                      <h5 className="mb-0 fw-bold text-dark hover-primary cursor-pointer fs-6">{activeConv.participant?.name}</h5>
+                      <h5 className="mb-0 fw-bold text-dark hover-primary cursor-pointer fs-6 text-truncate pe-2">{activeConv.participant?.name}</h5>
                     </Link>
                     <div className="d-flex align-items-center gap-2">
-                      <div className="bg-success rounded-circle" style={{ width: '8px', height: '8px' }}></div>
-                      <small className={typing ? "text-primary fw-bold" : "text-muted fw-semibold smaller"}>
-                        {typing ? "is typing..." : "Online Now"}
+                      <div className="bg-success rounded-circle flex-shrink-0" style={{ width: '6px', height: '6px' }}></div>
+                      <small className={typing ? "text-primary fw-bold text-truncate" : "text-muted fw-semibold smaller text-truncate"}>
+                        {typing ? "is typing..." : "Online"}
                       </small>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setActiveConv(prev => ({ ...prev, triggerCall: true }))}
-                    className="btn btn-premium border bg-white text-primary px-3 shadow-none d-flex align-items-center gap-2"
-                  >
-                    <LuVideo /> <span className="d-none d-sm-inline">Video Call</span>
-                  </button>
+                  
+                  <div className="d-flex align-items-center gap-1 gap-sm-2">
+                    <button
+                      onClick={() => setActiveConv(prev => ({ ...prev, triggerCall: true }))}
+                      className="btn btn-light border bg-white text-primary p-2 p-sm-2 rounded-circle rounded-sm-pill d-flex align-items-center justify-content-center gap-2 shadow-none"
+                      title="Video Call"
+                    >
+                      <LuVideo size={18} /> <span className="d-none d-lg-inline small fw-bold">Video Call</span>
+                    </button>
 
-                  {/* Complete Swap Button — always visible beside Video Call */}
-                  {(() => {
-                    const myId = String(user?.id || user?._id || '');
-                    const peerId = String(activeConv.participant?.id || activeConv.participant?._id || '');
+                    {(() => {
+                      const myId = String(user?.id || user?._id || '');
+                      const peerId = String(activeConv.participant?.id || activeConv.participant?._id || '');
 
-                    // Safe string comparison to avoid ObjectId vs string mismatches
-                    const conn = connections.find(c => {
-                      const reqId = String(c.requester?.id || c.requester?._id || '');
-                      const recId = String(c.recipient?.id || c.recipient?._id || '');
-                      return (
-                        (reqId === myId && recId === peerId) ||
-                        (reqId === peerId && recId === myId)
+                      const conn = connections.find(c => {
+                        const reqId = String(c.requester?.id || c.requester?._id || '');
+                        const recId = String(c.recipient?.id || c.recipient?._id || '');
+                        return (
+                          (reqId === myId && recId === peerId) ||
+                          (reqId === peerId && recId === myId)
+                        );
+                      });
+
+                      if (!conn) return null;
+
+                      const swapDone = conn.status === 'completed';
+                      const alreadyMarked = (conn.swapCompletedBy || []).map(id => String(id));
+                      const iMarked = alreadyMarked.includes(myId);
+
+                      if (swapDone) return (
+                        <span className="badge bg-success-light text-success px-2 py-2 rounded-pill d-flex align-items-center gap-1 fw-bold border border-success-subtle">
+                          <LuCircleCheck size={14} /> <span className="d-none d-sm-inline">Done</span>
+                        </span>
                       );
-                    });
 
-                    if (!conn) return null; // No connection — hide the button
+                      if (iMarked) return (
+                        <span className="badge bg-warning-light text-warning-emphasis px-2 py-2 rounded-pill d-flex align-items-center gap-1 fw-bold border border-warning-subtle">
+                           <span className="d-none d-sm-inline small">Wait...</span> ⏳
+                        </span>
+                      );
 
-                    const swapDone = conn.status === 'completed';
-                    const alreadyMarked = (conn.swapCompletedBy || []).map(id => String(id));
-                    const iMarked = alreadyMarked.includes(myId);
-
-                    if (swapDone) return (
-                      <span className="badge bg-success-light text-success px-3 py-2 rounded-pill d-flex align-items-center gap-1 fw-bold">
-                        <LuCircleCheck size={16} /> Swap Completed
-                      </span>
-                    );
-
-                    if (iMarked) return (
-                      <span className="badge bg-warning-light text-warning-emphasis px-3 py-2 rounded-pill d-flex align-items-center gap-1 fw-bold">
-                        ⏳ Waiting for partner...
-                      </span>
-                    );
-
-                    return (
-                      <button
-                        onClick={completeSwapFromChat}
-                        disabled={completingSwap}
-                        className="btn btn-sm bg-success-light text-success border border-success d-flex align-items-center gap-1 fw-semibold rounded-pill px-3"
-                        title="Mark this skill swap as complete"
-                      >
-                        {completingSwap
-                          ? <span className="spinner-border spinner-border-sm"></span>
-                          : <LuCircleCheck size={16} />}
-                        <span className="d-none d-sm-inline">Complete Swap</span>
-                      </button>
-                    );
-                  })()}
+                      return (
+                        <button
+                          onClick={completeSwapFromChat}
+                          disabled={completingSwap}
+                          className="btn btn-premium btn-premium-primary text-white border-0 d-flex align-items-center justify-content-center gap-1 fw-semibold rounded-pill px-2 py-2"
+                          style={{ minWidth: '40px' }}
+                          title="Complete Swap"
+                        >
+                          {completingSwap
+                            ? <span className="spinner-border spinner-border-sm"></span>
+                            : <LuCircleCheck size={18} />}
+                          <span className="d-none d-md-inline small">Complete</span>
+                        </button>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* Message Stream */}
-                <div className="flex-grow-1 overflow-auto p-4 p-md-5 bg-light-subtle d-flex flex-column gap-4 scroll-smooth">
+                <div className="flex-grow-1 overflow-auto p-3 p-md-5 bg-light-subtle d-flex flex-column gap-3 gap-md-4 scroll-smooth scroll-hide" style={{ overflowX: 'hidden' }}>
                   {messages.length === 0 && (
                     <div className="text-center py-5 text-muted">
                       <LuHeart size={40} className="mb-3 opacity-25 text-primary" />
@@ -508,37 +511,37 @@ export default function MessagesPage() {
                           initial={{ opacity: 0, scale: 0.9, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           key={msg._id || msg.id || i}
-                          className={`d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'}`}
+                          className={`d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} w-100`}
                         >
-                          <div className={`d-flex gap-3 max-w-75 ${isMe ? 'flex-row-reverse' : ''}`}>
+                          <div className={`d-flex gap-2 gap-md-3 ${isMe ? 'flex-row-reverse' : ''}`} style={{ maxWidth: '90%' }}>
                             {!isMe && (
                               <img src={msg.sender?.avatar || "/default-avatar.png"} width="32" height="32" className="rounded-circle mt-auto border" alt="" />
                             )}
-                            <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`}>
-                              <div className={`px-4 py-2 rounded-2xl shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark border'}`}>
+                             <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'} overflow-hidden`}>
+                              <div className={`p-2 p-md-3 px-md-4 rounded-2xl shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark border'}`}>
                                 {msg.fileUrl && (
-                                  <div className="mb-2 max-w-100">
+                                  <div className="mb-2 w-100" style={{ minWidth: '200px' }}>
                                     {msg.fileType?.startsWith('image/') ? (
                                       <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="d-block overflow-hidden rounded shadow-sm hover:opacity-90 transition-opacity">
-                                        <img src={msg.fileUrl} alt={msg.fileName} className="img-fluid rounded" style={{ maxHeight: '250px', objectFit: 'cover' }} />
+                                        <img src={msg.fileUrl} alt={msg.fileName} className="img-fluid rounded w-100" style={{ maxHeight: '250px', objectFit: 'cover' }} />
                                       </a>
                                     ) : (
-                                      <div className={`p-3 rounded border d-flex align-items-center gap-3 ${isMe ? 'bg-primary-dark border-primary-light' : 'bg-light'}`}>
-                                        <div className={`p-2 rounded-circle ${isMe ? 'bg-white text-primary' : 'bg-primary-light text-primary'}`}>
-                                          <LuFile size={20} />
+                                      <div className={`p-2 p-md-3 rounded border d-flex align-items-center gap-2 gap-md-3 ${isMe ? 'bg-primary-dark border-primary-light' : 'bg-light'}`}>
+                                        <div className={`p-2 rounded-circle flex-shrink-0 ${isMe ? 'bg-white text-primary' : 'bg-primary-light text-primary'}`}>
+                                          <LuFile size={18} />
                                         </div>
                                         <div className="overflow-hidden flex-grow-1">
                                           <p className="mb-0 fw-bold text-truncate small" title={msg.fileName}>{msg.fileName}</p>
                                           <p className="mb-0 smaller opacity-75">{(msg.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                                         </div>
-                                        <a href={msg.fileUrl} download={msg.fileName} className={`btn btn-sm rounded-circle p-2 ${isMe ? 'btn-light text-primary' : 'btn-primary text-white'}`}>
-                                          <LuDownload size={16} />
+                                        <a href={msg.fileUrl} download={msg.fileName} className={`btn btn-sm rounded-circle p-2 flex-shrink-0 ${isMe ? 'btn-light text-primary' : 'btn-primary text-white'}`}>
+                                          <LuDownload size={14} />
                                         </a>
                                       </div>
                                     )}
                                   </div>
                                 )}
-                                {msg.content && <p className="mb-0 fs-6 leading-relaxed">{msg.content}</p>}
+                                {msg.content && <p className="mb-0 fs-6 leading-relaxed" style={{ wordBreak: 'break-word' }}>{msg.content}</p>}
                               </div>
                               <small className="smaller opacity-50 fw-bold mt-1 text-uppercase tracking-tighter" style={{ fontSize: '0.6rem' }}>
                                 {msg.createdAt ? formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true }) : 'Just now'}
@@ -581,11 +584,11 @@ export default function MessagesPage() {
                     />
                     <button
                       type="submit"
-                      className="btn btn-premium btn-premium-primary text-white rounded-circle p-0 d-flex align-items-center justify-content-center shadow-lg"
-                      style={{ width: '52px', height: '52px' }}
+                      className="btn btn-premium btn-premium-primary text-white rounded-circle p-0 d-flex align-items-center justify-content-center shadow-lg flex-shrink-0"
+                      style={{ width: '48px', height: '48px' }}
                       disabled={(!newMsg.trim() && !uploading) || sending || uploading}
                     >
-                      {sending ? <span className="spinner-border spinner-border-sm"></span> : <LuSend size={24} />}
+                      {sending ? <span className="spinner-border spinner-border-sm"></span> : <LuSend size={22} />}
                     </button>
                   </form>
                 </div>

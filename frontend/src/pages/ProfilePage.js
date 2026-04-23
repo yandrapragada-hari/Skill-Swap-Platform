@@ -40,12 +40,12 @@ export default function ProfilePage() {
       <div className="row justify-content-center">
         <div className="col-lg-10">
           
-          <div className="d-flex justify-content-between align-items-center mb-5">
+          <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 mb-md-5 gap-3">
             <div>
                 <h1 className="fw-bold mb-1">My Profile</h1>
-                <p className="text-secondary mb-0">Manage your public presence and expert identity.</p>
+                <p className="text-secondary mb-0 small small-md-base">Manage your public presence and expert identity.</p>
             </div>
-            <Link to="/profile/edit" className="btn btn-premium btn-premium-primary text-white shadow">
+            <Link to="/profile/edit" className="btn btn-premium btn-premium-primary text-white shadow w-100 w-sm-auto justify-content-center">
               <LuPencil /> Edit Profile
             </Link>
           </div>
@@ -58,20 +58,20 @@ export default function ProfilePage() {
           >
             <div className="bg-primary-light h-32 w-100" style={{ height: '120px' }}></div>
             <div className="card-body p-4 p-md-5 pt-0">
-              <div className="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-4 mb-5" style={{ marginTop: '-60px' }}>
+              <div className="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-3 gap-md-4 mb-4 mb-md-5" style={{ marginTop: '-60px' }}>
                 <div className="position-relative">
                    <img 
                     src={user.avatar || "/default-avatar.png"} 
                     alt={user.name} 
-                    className="rounded-circle border border-4 border-white shadow-xl object-cover" 
-                    width="140" 
-                    height="140" 
+                    className="rounded-circle border border-4 border-white shadow-xl object-cover bg-white" 
+                    width="120" 
+                    height="120" 
                     />
-                    <div className="position-absolute bottom-0 end-0 bg-success p-1 rounded-circle border border-white mb-2 me-1" style={{ width: '20px', height: '20px' }}></div>
+                    <div className="position-absolute bottom-0 end-0 bg-success p-1 rounded-circle border border-3 border-white mb-2 me-1 shadow-sm" style={{ width: '20px', height: '20px' }}></div>
                 </div>
-                <div className="text-center text-md-start pb-2">
-                  <h2 className="fw-bold mb-1 display-6">{user.name}</h2>
-                  <p className="text-secondary fs-5 mb-0">{user.email}</p>
+                <div className="text-center text-md-start pb-1">
+                  <h2 className="fw-bold mb-1 fs-2">{user.name}</h2>
+                  <p className="text-secondary fs-6 mb-0">{user.email}</p>
                 </div>
               </div>
 
@@ -114,11 +114,11 @@ export default function ProfilePage() {
                   </div>
               )}
 
-              <div className="d-flex flex-wrap gap-5 justify-content-center justify-content-md-start">
+              <div className="d-grid d-md-flex flex-wrap gap-4 gap-md-5 justify-content-center justify-content-md-start" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                   {profileStats.map(s => (
-                      <div key={s.label} className="text-center">
-                          <h3 className={`fw-bold mb-0 display-6 ${s.color}`}>{s.value}</h3>
-                          <small className="text-muted fw-semibold text-uppercase tracking-widest" style={{ fontSize: '0.65rem' }}>{s.label}</small>
+                      <div key={s.label} className="text-center text-md-start">
+                          <h3 className={`fw-bold mb-0 fs-3 ${s.color}`}>{s.value}</h3>
+                          <small className="text-muted fw-semibold text-uppercase tracking-widest" style={{ fontSize: '0.6rem' }}>{s.label}</small>
                       </div>
                   ))}
               </div>

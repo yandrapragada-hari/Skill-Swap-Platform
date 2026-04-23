@@ -23,6 +23,20 @@
   
   /* Transitions */
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing */
+  --container-padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --container-padding: 1rem;
+  }
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 * {
@@ -124,3 +138,74 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* --- Responsive Utilities --- */
+
+.mobile-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .mobile-stack {
+    flex-direction: row;
+  }
+}
+
+.mobile-text-center {
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .mobile-text-center {
+    text-align: inherit;
+  }
+}
+
+.hide-on-mobile {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .hide-on-mobile {
+    display: block !important;
+  }
+}
+
+.show-on-mobile {
+  display: block !important;
+}
+
+@media (min-width: 768px) {
+  .show-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Glassmorphism Mobile Refinement */
+@media (max-width: 768px) {
+  .glass-card {
+    border-radius: 1rem;
+    padding: 1.25rem !important;
+  }
+}
+
+/* Typography Fluidity */
+@media (max-width: 576px) {
+  .display-3 {
+    font-size: 2.25rem;
+  }
+  .display-4 {
+    font-size: 1.75rem;
+  }
+  .display-5 {
+    font-size: 1.5rem;
+  }
+}
+/* Minimalist Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.1); }
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }

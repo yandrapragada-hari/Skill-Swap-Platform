@@ -23,9 +23,7 @@ export default function UserProfilePage() {
       try {
         const res = await api.get(`/users/${userId}`);
         setUser(res.data.user);
-        // connectionCount is now returned directly by getUserProfile backend
         setConnectionCount(res.data.user?.connectionCount || 0);
-        // Fetch reviews for this user
         try {
           const revRes = await api.get(`/connections/reviews/${userId}`);
           setReviews(revRes.data.reviews || []);
@@ -172,15 +170,15 @@ export default function UserProfilePage() {
               </div>
 
               {user.bio && (
-                  <div className="bg-light p-4 p-md-5 rounded-2xl mb-5 border">
+                  <div className="bg-light p-4 rounded-2xl mb-5 border">
                       <h5 className="fw-bold mb-4 text-dark text-uppercase tracking-widest" style={{ fontSize: '0.75rem' }}>About {user.name.split(' ')[0]}</h5>
-                      <p className="text-secondary leading-relaxed fs-5 mb-0">{user.bio}</p>
+                      <p className="text-secondary leading-relaxed mb-0">{user.bio}</p>
                   </div>
               )}
 
               {/* Action Buttons & Social */}
-              <div className="d-flex flex-wrap align-items-center justify-content-between p-4 bg-primary-light rounded-3xl gap-4 border border-primary-subtle">
-                <div className="d-flex gap-4">
+              <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between p-3 p-md-4 bg-primary-light rounded-3xl gap-3 gap-md-4 border border-primary-subtle">
+                <div className="d-flex gap-4 justify-content-center justify-content-md-start">
                     {user.socialLinks?.linkedin && <a href={user.socialLinks.linkedin} target="_blank" rel="noreferrer" className="text-primary hover:scale-110 transition-transform"><LuLinkedin size={28} /></a>}
                     {user.socialLinks?.github && <a href={user.socialLinks.github} target="_blank" rel="noreferrer" className="text-dark hover:scale-110 transition-transform"><LuGithub size={28} /></a>}
                     {user.socialLinks?.twitter && <a href={user.socialLinks.twitter} target="_blank" rel="noreferrer" className="text-info hover:scale-110 transition-transform"><LuTwitter size={28} /></a>}
@@ -188,36 +186,35 @@ export default function UserProfilePage() {
                 </div>
 
                 {!isOwnProfile ? (
-                    <div className="d-flex gap-3">
-                        <Link to={`/messages/${[me?.id || me?._id, userId].sort().join('_')}`} className="btn btn-premium border bg-white text-primary px-4 py-3 shadow-none fw-bold fs-6">
-                            <LuMessageSquare className="me-2" /> Message
+                    <div className="d-flex flex-column flex-sm-row gap-2 gap-sm-3">
+                        <Link to={`/messages/${[me?.id || me?._id, userId].sort().join('_')}`} className="btn btn-premium border bg-white text-primary px-3 py-2 shadow-none fw-bold small justify-content-center">
+                            <LuMessageSquare className="me-2" size={18} /> Message
                         </Link>
                         <button
                             onClick={handleConnect}
                             disabled={sending || sent}
-                            className={`btn btn-premium btn-premium-primary px-5 py-3 shadow-lg fs-6 ${sent ? 'bg-success border-0 px-4' : ''}`}
+                            className={`btn btn-premium btn-premium-primary px-3 py-2 shadow-lg small justify-content-center ${sent ? 'bg-success border-0 px-4' : ''}`}
                         >
-                            {sent ? <LuCircleCheck className="me-2" /> : sending ? <span className="spinner-border spinner-border-sm me-2"></span> : <LuSend className="me-2" />}
+                            {sent ? <LuCircleCheck className="me-2" size={18} /> : sending ? <span className="spinner-border spinner-border-sm me-2"></span> : <LuSend className="me-2" size={18} />}
                             {sent ? 'Requested' : sending ? 'Sending...' : 'Connect to Swap'}
                         </button>
                     </div>
                 ) : (
-                    <Link to="/profile/edit" className="btn btn-premium btn-premium-primary px-5 py-3 shadow-lg fs-6">
-                        <LuPencil className="me-2" /> Optimize My Profile
+                    <Link to="/profile/edit" className="btn btn-premium btn-premium-primary px-4 py-2 shadow-lg small justify-content-center">
+                        <LuPencil className="me-2" size={18} /> Optimize My Profile
                     </Link>
                 )}
               </div>
             </div>
           </motion.div>
-
           {/* Detailed Skills Display */}
-          <div className="row g-5">
-            <div className="col-md-12">
-                <div className="d-flex align-items-center gap-3 mb-5 mt-4">
-                    <div className="bg-primary p-2 rounded-lg text-white d-flex align-items-center justify-content-center shadow-lg">
-                        <LuBookOpen size={24} />
+          <div className="row g-4 g-md-5">
+            <div className="col-12">
+                <div className="d-flex align-items-center gap-2 gap-sm-3 mb-4 mt-4">
+                    <div className="bg-primary p-2 rounded-lg text-white d-flex align-items-center justify-content-center shadow-lg flex-shrink-0" style={{ width: '40px', height: '40px' }}>
+                        <LuBookOpen size={20} />
                     </div>
-                    <h3 className="fw-bold mb-0 tracking-tight">Expertise & Learning Goals</h3>
+                    <h3 className="fw-bold mb-0 tracking-tight fs-4 fs-md-3">Expertise & Learning Goals</h3>
                 </div>
             </div>
             
@@ -227,8 +224,11 @@ export default function UserProfilePage() {
                 className="glass-card h-100 shadow-lg bg-white p-4 p-md-5 rounded-4 position-relative overflow-hidden border border-primary-subtle"
               >
                 <div className="position-absolute top-0 start-0 w-100 bg-primary" style={{ height: '6px' }}></div>
-                <div className="d-flex align-items-center gap-3 mb-4">
-                    <div className="bg-primary-light text-primary p-3 rounded-circle shadow-sm border border-primary-subtle"><LuBookOpen size={28} /></div>
+                <div className="d-flex align-items-center gap-2 gap-sm-3 mb-4">
+                    <div className="bg-primary-light text-primary p-2 p-sm-3 rounded-circle shadow-sm border border-primary-subtle flex-shrink-0">
+                      <LuBookOpen size={24} className="d-none d-sm-block" />
+                      <LuBookOpen size={20} className="d-block d-sm-none" />
+                    </div>
                     <h4 className="fw-bold mb-0 fs-5">Can Teach You</h4>
                 </div>
                 <div className="d-flex flex-wrap gap-2 pt-2">
@@ -251,8 +251,11 @@ export default function UserProfilePage() {
                 className="glass-card h-100 shadow-lg bg-white p-4 p-md-5 rounded-4 position-relative overflow-hidden border border-success-subtle"
               >
                 <div className="position-absolute top-0 start-0 w-100 bg-success" style={{ height: '6px' }}></div>
-                <div className="d-flex align-items-center gap-3 mb-4">
-                    <div className="bg-success-light text-success p-3 rounded-circle shadow-sm border border-success-subtle"><LuGraduationCap size={28} /></div>
+                <div className="d-flex align-items-center gap-2 gap-sm-3 mb-4">
+                    <div className="bg-success-light text-success p-2 p-sm-3 rounded-circle shadow-sm border border-success-subtle flex-shrink-0">
+                      <LuGraduationCap size={24} className="d-none d-sm-block" />
+                      <LuGraduationCap size={20} className="d-block d-sm-none" />
+                    </div>
                     <h4 className="fw-bold mb-0 fs-5">Wants to Master</h4>
                 </div>
                 <div className="d-flex flex-wrap gap-2 pt-2">

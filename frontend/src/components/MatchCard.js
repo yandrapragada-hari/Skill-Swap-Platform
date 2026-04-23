@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { LuUser, LuAward, LuSend, LuEye, LuRepeat, LuBookOpen, LuArrowUpRight, LuTarget, LuCircleCheck, LuUsers, LuStar } from 'react-icons/lu';
+import { LuUser, LuAward, LuSend, LuEye, LuRepeat, LuBookOpen, LuArrowUpRight, LuTarget, LuCircleCheck, LuUsers, LuStar, LuMessageSquare } from 'react-icons/lu';
 
-export default function MatchCard({ match, compact = false }) {
+export default function MatchCard({ match, compact = false, isConnected = false }) {
+  const { user: me } = useAuth();
   const { user, score, teachesYou, learnsFromYou, isReciprocal } = match;
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -36,31 +38,31 @@ export default function MatchCard({ match, compact = false }) {
     >
       <div className="p-4">
         {/* Header */}
-        <div className="d-flex align-items-start justify-content-between mb-3">
-          <Link to={`/users/${user.id || user._id}`} className="d-flex align-items-center text-decoration-none">
-            <div className="position-relative me-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start justify-content-between mb-3 gap-3">
+          <Link to={`/users/${user.id || user._id}`} className="d-flex align-items-center text-decoration-none overflow-hidden">
+            <div className="position-relative me-3 flex-shrink-0">
               <img 
                 src={user.avatar || "/default-avatar.png"} 
                 alt={user.name} 
-                width="64" 
-                height="64" 
+                width="60" 
+                height="60" 
                 className="rounded-circle border-2 border-white shadow-sm object-cover" 
               />
               {isReciprocal && (
-                <div className="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-1 border border-white" style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
-                  <LuRepeat size={12} />
+                <div className="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-1 border border-white" style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LuRepeat size={10} />
                 </div>
               )}
             </div>
             <div className="overflow-hidden">
-              <h5 className="fw-bold text-dark mb-1 text-truncate">{user.name}</h5>
-              <div className="d-flex align-items-center text-primary fw-semibold small">
-                <LuBookOpen className="me-1" />
+              <h5 className="fw-bold text-dark mb-0 text-truncate">{user.name}</h5>
+              <div className="d-flex align-items-center text-primary fw-semibold small mt-1">
+                <LuBookOpen className="me-1 flex-shrink-0" />
                 <span className="text-truncate">
                   {(() => {
                     const displaySkills = teachesYou.length > 0 ? teachesYou : (user.teachSkills || []);
                     return displaySkills.length > 0 
-                      ? displaySkills.map(renderSkill).slice(0, 2).join(', ') + (displaySkills.length > 2 ? '...' : '') 
+                      ? displaySkills.map(renderSkill).slice(0, 1).join(', ') + (displaySkills.length > 1 ? '...' : '') 
                       : "Expert Mentor";
                   })()}
                 </span>
@@ -68,7 +70,7 @@ export default function MatchCard({ match, compact = false }) {
             </div>
           </Link>
           {/* Rating badge — top right */}
-          <div className="d-flex flex-column align-items-end gap-1">
+          <div className="d-flex flex-row flex-sm-column align-items-center align-items-sm-end gap-1">
             <div className="bg-warning-light text-warning-emphasis px-2 py-1 rounded-pill d-flex align-items-center gap-1 fw-bold small border border-warning-subtle">
               <LuStar size={13} />
               <span>{user.rating?.toFixed(1) || '0.0'}</span>
@@ -121,13 +123,23 @@ export default function MatchCard({ match, compact = false }) {
 
         {/* Actions */}
         <div className="d-flex gap-2 pt-2">
-          <button
-            onClick={handleConnect}
-            disabled={sending || sent}
-            className={`btn btn-premium flex-grow-1 ${sent ? 'btn-outline-success border-success text-success disabled bg-white' : 'btn-premium-primary text-white'}`}
-          >
-            {sent ? 'Requested' : sending ? <span className="spinner-border spinner-border-sm me-2"></span> : 'Connect'}
-          </button>
+          {isConnected ? (
+            <Link 
+              to={`/messages/${[me?.id || me?._id, user.id || user._id].sort().join('_')}`} 
+              className="btn btn-premium btn-premium-primary text-white flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', border: 'none' }}
+            >
+              <LuMessageSquare size={18} /> Chat
+            </Link>
+          ) : (
+            <button
+              onClick={handleConnect}
+              disabled={sending || sent}
+              className={`btn btn-premium flex-grow-1 ${sent ? 'btn-outline-success border-success text-success disabled bg-white' : 'btn-premium-primary text-white'}`}
+            >
+              {sent ? 'Requested' : sending ? <span className="spinner-border spinner-border-sm me-2"></span> : 'Connect'}
+            </button>
+          )}
           <Link 
             to={`/users/${user.id || user._id}`} 
             className="btn btn-premium border bg-white text-secondary hover:bg-light px-3"

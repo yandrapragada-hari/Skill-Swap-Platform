@@ -7,15 +7,20 @@ import { LuUsers, LuSearch, LuFilter, LuTarget, LuArrowRight, LuStar, LuMapPin, 
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState([]);
+  const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // 'all' | 'mutual' | 'highest'
+  const [filter, setFilter] = useState('all'); 
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get('/matches');
-        setMatches(res.data.matches || []);
+        const [mRes, cRes] = await Promise.all([
+          api.get('/matches'),
+          api.get('/connections')
+        ]);
+        setMatches(mRes.data.matches || []);
+        setConnections(cRes.data.connections || []);
       } catch (err) {
         console.error("Matches load error:", err);
       } finally {
@@ -67,31 +72,38 @@ export default function MatchesPage() {
 
   return (
     <div className="pb-5">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
-        <div>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-4">
+        <div className="text-center text-md-start">
           <h1 className="fw-bold mb-1">Discover Matches</h1>
           <p className="text-secondary mb-0">
             {filteredMatches.length} {filteredMatches.length === 1 ? 'member' : 'members'} found with complementary skills
           </p>
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex flex-column flex-sm-row gap-2 gap-sm-3 w-100 w-md-auto">
             <select 
-              className="form-select rounded-pill border-0 shadow-sm glass-card fw-medium text-secondary"
+              className="form-select rounded-pill border shadow-sm fw-medium text-secondary"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              style={{ minWidth: '160px' }}
+              style={{ 
+                minWidth: '100%', 
+                height: '52px', 
+                paddingLeft: '1.25rem', 
+                fontSize: '1rem',
+                lineHeight: 'normal',
+                backgroundColor: 'white'
+              }}
             >
               <option value="all">All Matches</option>
               <option value="mutual">Mutual Only</option>
               <option value="highest">Best Match First</option>
             </select>
-            <div className="position-relative">
+            <div className="position-relative flex-grow-1" style={{ minWidth: '100%' }}>
                 <LuSearch className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                 <input 
                     type="text" 
                     placeholder="Search by name or skill..." 
-                    className="form-control rounded-pill ps-5 border-0 shadow-sm glass-card"
-                    style={{ minWidth: '260px' }}
+                    className="form-control rounded-pill ps-5 border shadow-sm"
+                    style={{ height: '52px', width: '100%', backgroundColor: 'white' }}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -126,17 +138,25 @@ export default function MatchesPage() {
         </motion.div>
       ) : (
         <div className="row g-4">
-          {filteredMatches.map((m, idx) => (
-            <motion.div 
-              key={m.user.id || m.user._id} 
-              className="col-md-6 col-lg-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <MatchCard match={m} />
-            </motion.div>
-          ))}
+          {filteredMatches.map((m, idx) => {
+            const userId = m.user.id || m.user._id;
+            const connected = connections.some(c => 
+              (c.requester?.id || c.requester?._id) === userId || 
+              (c.recipient?.id || c.recipient?._id) === userId
+            );
+
+            return (
+              <motion.div 
+                key={userId} 
+                className="col-md-6 col-lg-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
+                <MatchCard match={m} isConnected={connected} />
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>

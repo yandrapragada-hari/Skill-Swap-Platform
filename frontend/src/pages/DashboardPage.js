@@ -147,28 +147,28 @@ export default function DashboardPage() {
                 <div className="glass-card overflow-hidden border-0">
                   <div className="list-group list-group-flush">
                     {pending.incoming.slice(0, 3).map(conn => (
-                      <div key={conn._id} className="list-group-item bg-transparent p-4 d-flex align-items-center gap-4 border-bottom">
+                      <div key={conn._id} className="list-group-item bg-transparent p-3 p-md-4 d-flex flex-column flex-md-row align-items-center align-items-md-center gap-3 gap-md-4 border-bottom">
                         <img 
                           src={conn.requester?.avatar || "/default-avatar.png"} 
                           alt="" 
                           width="56" 
                           height="56" 
-                          className="rounded-full border object-cover" 
+                          className="rounded-circle border object-cover shadow-sm" 
                         />
-                        <div className="flex-grow-1">
+                        <div className="flex-grow-1 text-center text-md-start">
                           <h6 className="mb-1 fw-bold fs-6">{conn.requester?.name}</h6>
                           <p className="text-muted small mb-0 line-clamp-1 italic">"{conn.message || "Wants to share skills with you!"}"</p>
                         </div>
-                        <div className="d-flex gap-2">
+                        <div className="d-grid d-md-flex gap-2 w-100 w-md-auto" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
                           <button 
                             onClick={() => handleRespond(conn._id, 'accepted')} 
-                            className="btn btn-primary rounded-pill px-3 py-1 small d-flex align-items-center gap-1"
+                            className="btn btn-primary rounded-pill px-3 py-2 small d-flex align-items-center justify-content-center gap-1"
                           >
                             <LuCheck /> Accept
                           </button>
                           <button 
                             onClick={() => handleRespond(conn._id, 'rejected')} 
-                            className="btn btn-outline-light text-dark rounded-pill px-3 py-1 small d-flex align-items-center gap-1 border"
+                            className="btn btn-outline-light text-dark rounded-pill px-3 py-2 small d-flex align-items-center justify-content-center gap-1 border"
                           >
                             <LuX /> Decline
                           </button>
@@ -189,17 +189,26 @@ export default function DashboardPage() {
             </div>
             <div className="row g-4">
               {matches.length > 0 ? (
-                matches.map((m, idx) => (
-                  <motion.div 
-                    key={m.user?._id || m.user?.id} 
-                    className="col-md-6"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
-                  >
-                    <MatchCard match={m} compact />
-                  </motion.div>
-                ))
+                matches.map((m, idx) => {
+                  const mUserId = m.user?._id || m.user?.id;
+                  const connected = connections.some(c => {
+                    const rId = c.requester?.id || c.requester?._id;
+                    const pId = c.recipient?.id || c.recipient?._id;
+                    return rId === mUserId || pId === mUserId;
+                  });
+
+                  return (
+                    <motion.div 
+                      key={mUserId} 
+                      className="col-md-6"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.1 }}
+                    >
+                      <MatchCard match={m} compact isConnected={connected} />
+                    </motion.div>
+                  );
+                })
               ) : (
                 <div className="col-12">
                    <div className="glass-card p-5 text-center border-dashed">
