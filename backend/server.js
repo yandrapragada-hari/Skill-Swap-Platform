@@ -31,14 +31,10 @@ app.use((req, res, next) => {
 
 const PORT = process.env.BACKEND_PORT || 5000;
 
+const connectDB = require('./config/db');
+
 // ── MongoDB Connection ──────────────────────────────────────────────
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+connectDB();
 
 // ── Socket.io ───────────────────────────────────────────────────────
 io.on('connection', (socket) => {
