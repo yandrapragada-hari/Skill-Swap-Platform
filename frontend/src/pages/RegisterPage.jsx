@@ -113,7 +113,7 @@ export default function RegisterPage() {
                         label="Password" 
                         icon={LuLock} 
                         type="password" 
-                        placeholder="Min. 6 characters" 
+                        placeholder="Min-6.characters" 
                         value={form.password} 
                         onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                     />

@@ -4,7 +4,7 @@ let socket = null;
 
 export const connectSocket = (userId) => {
   if (socket?.connected) return socket;
-  socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000', {
+  socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
     transports: ['websocket'],
     reconnection: true,
     reconnectionAttempts: 5,
