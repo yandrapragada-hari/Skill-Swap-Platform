@@ -71,8 +71,8 @@ export default function AppLayout() {
   return (
     <div className="app-container min-vh-100 pb-5">
       {/* Premium Navbar */}
-      <nav className="navbar navbar-expand-lg sticky-top glass-card rounded-0 border-top-0 border-start-0 border-end-0 py-3 mb-4">
-        <div className="container">
+      <nav className="navbar navbar-expand-lg sticky-top bg-white shadow-sm py-3 mb-4">
+        <div className="container-fluid px-lg-4">
           <NavLink className="navbar-brand d-flex align-items-center gap-2" to="/dashboard">
             <motion.div 
               whileHover={{ scale: 1.05 }}
@@ -88,7 +88,7 @@ export default function AppLayout() {
           </button>
           
           <div className="collapse navbar-collapse" id="navbarMain">
-            <div className="d-flex flex-column flex-lg-row w-100 justify-content-between align-items-stretch align-items-lg-center mt-3 mt-lg-0 bg-white bg-lg-transparent p-3 p-lg-0 rounded-4 shadow-sm shadow-lg-none border border-light border-lg-0">
+            <div className="d-flex flex-column flex-lg-row w-100 justify-content-between align-items-center gap-3 mt-3 mt-lg-0">
               <ul className="navbar-nav mx-auto mb-3 mb-lg-0 gap-2 w-100 w-lg-auto">
                 {navItems.map((item) => (
                   <li className="nav-item w-100 w-lg-auto" key={item.to}>
@@ -109,11 +109,11 @@ export default function AppLayout() {
                 ))}
               </ul>
               
-              <div className="d-flex flex-column flex-lg-row align-items-center gap-3 mt-2 mt-lg-0 w-100 w-lg-auto pt-3 pt-lg-0 border-top border-lg-0 border-light">
+              <div className="d-flex flex-column flex-lg-row align-items-center gap-3 w-100 w-lg-auto">
                 <NavLink to="/profile" className="nav-link p-0 text-decoration-none w-100 w-lg-auto">
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="d-flex align-items-center gap-2 gap-sm-3 bg-light p-1 pe-2 pe-sm-3 rounded-pill border w-100"
+                    className="d-flex align-items-center gap-2 bg-light rounded-pill border px-3 py-2"
                   >
                     <img 
                       src={user?.avatar || "/default-avatar.png"} 
@@ -122,27 +122,20 @@ export default function AppLayout() {
                       height="36" 
                       className="rounded-circle shadow-sm" 
                     />
-                    <span className="fw-semibold text-dark text-truncate" style={{maxWidth: '120px'}}>{user?.name?.split(' ')[0]}</span>
-                    <span className="ms-auto d-lg-none text-muted small">View Profile</span>
+                    <div className="d-flex flex-column align-items-start">
+                      <span className="fw-semibold text-dark text-truncate" style={{ maxWidth: '140px' }}>{user?.name?.split(' ')[0]}</span>
+                      {/* <small className="text-muted">My Profile</small> */}
+                    </div>
                   </motion.div>
                 </NavLink>
 
                 <button 
                   onClick={handleLogout} 
-                  className="btn btn-light rounded-pill px-4 py-2 w-100 d-flex align-items-center justify-content-center border text-danger flex-shrink-0 d-lg-none shadow-sm"
-                  title="Sign Out"
+                  className="btn btn-outline-danger rounded-pill px-4 py-2 d-flex align-items-center justify-content-center border flex-shrink-0"
+                  title="Logout"
                 >
-                  <LuLogOut size={20} className="me-2" />
-                  <span className="fw-semibold text-uppercase tracking-wider small">Sign Out</span>
-                </button>
-
-                <button 
-                  onClick={handleLogout} 
-                  className="btn btn-light rounded-circle p-2 d-none d-lg-flex align-items-center justify-content-center border text-danger flex-shrink-0"
-                  style={{width: '40px', height: '40px'}}
-                  title="Sign Out"
-                >
-                  <LuLogOut size={20} />
+                  <LuLogOut size={18} className="me-2" />
+                  <span className="fw-semibold">Logout</span>
                 </button>
               </div>
             </div>

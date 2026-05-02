@@ -1,6 +1,92 @@
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 const User = require('../models/User');
 const Connection = require('../models/Connection');
 const { sanitizeUser } = require('./authController');
+
+const uploadPath = path.join(__dirname, '..', 'uploads');
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${req.user.id}-${Date.now()}${ext}`);
+  },
+});
+
+const avatarUpload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+});
+
+const deleteLocalAvatar = async (avatarUrl, req) => {
+  if (!avatarUrl) return;
+  const uploadUrlPrefix = `${req.protocol}://${req.get('host')}/uploads/`;
+  if (!avatarUrl.startsWith(uploadUrlPrefix)) return;
+
+  try {
+    const parsedUrl = new URL(avatarUrl);
+    const filename = path.basename(parsedUrl.pathname);
+    const filePath = path.join(uploadPath, filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (error) {
+    console.error('Failed to delete old avatar file:', error);
+  }
+};
+
+exports.uploadAvatar = (req, res) => {
+  avatarUpload.single('avatar')(req, res, async (err) => {
+    if (err) {
+      console.error('Avatar upload error:', err);
+      const message = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Image too large. Upload a file under 2MB.'
+        : err.message || 'Error uploading avatar';
+      return res.status(400).json({ message });
+    }
+    if (!req.file) return res.status(400).json({ message: 'Avatar file is required' });
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      const oldAvatar = user.avatar;
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      user.avatar = fileUrl;
+      await user.save();
+      await deleteLocalAvatar(oldAvatar, req);
+
+      return res.json({ user: sanitizeUser(user) });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Unable to save avatar' });
+    }
+  });
+};
+
+exports.deleteAvatar = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const oldAvatar = user.avatar;
+    user.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1a9e8f&color=fff`;
+    await user.save();
+    await deleteLocalAvatar(oldAvatar, req);
+
+    return res.json({ user: sanitizeUser(user) });
+  } catch (error) {
+    console.error('Avatar delete error:', error);
+    return res.status(500).json({ message: 'Unable to remove avatar' });
+  }
+};
 
 const normalizeSkillList = (value) => {
   if (Array.isArray(value)) return value.map((s) => String(s).trim()).filter(Boolean);

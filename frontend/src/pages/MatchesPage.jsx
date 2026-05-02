@@ -85,7 +85,7 @@ export default function MatchesPage() {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               style={{ 
-                minWidth: '100%', 
+                minWidth: '20%', 
                 height: '52px', 
                 paddingLeft: '1.25rem', 
                 fontSize: '1rem',
@@ -97,7 +97,7 @@ export default function MatchesPage() {
               <option value="mutual">Mutual Only</option>
               <option value="highest">Best Match First</option>
             </select>
-            <div className="position-relative flex-grow-1" style={{ minWidth: '100%' }}>
+            <div className="position-relative flex-grow-1" style={{ minWidth: '80%' }}>
                 <LuSearch className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                 <input 
                     type="text" 
